@@ -39,7 +39,7 @@ jobs:
 
       - name: deb paketini kur ve çalıştır
         run: |
-          sudo apt-get install -y ./dist/*.deb
+          sudo apt-get install -y ./dist/YH-Launcher-amd64.deb
           test -x /usr/bin/yh-launcher
           grep -q "Name=YH Launcher" /usr/share/applications/yh-launcher.desktop
           # 15 sn boyunca çökmeden çalışıyorsa başarılı (timeout = 124)
@@ -54,7 +54,7 @@ jobs:
         run: |
           chmod +x dist/*.AppImage
           set +e
-          timeout 15 xvfb-run -a dist/*.AppImage --appimage-extract-and-run --no-sandbox --hidden
+          timeout 15 xvfb-run -a dist/YH-Launcher-x86_64.AppImage --appimage-extract-and-run --no-sandbox --hidden
           code=$?
           set -e
           echo "çıkış kodu: $code"
@@ -97,8 +97,36 @@ jobs:
       - name: Duman testi
         run: npx electron test/smoke.cjs
 
-      - name: Paketle (kurulum + taşınabilir exe)
+      - name: Paketle (kurulum + tek exe)
         run: npm run dist:win
+
+      # Kullanıcının bilgisayarında Node olmayacak: PATH'ten Node'u çıkarıp tek exe'yi çalıştır
+      - name: Tek exe'yi Node olmadan çalıştır
+        shell: pwsh
+        run: |
+          $env:Path = ($env:Path -split ';' | Where-Object { $_ -and -not (Test-Path (Join-Path $_ 'node.exe')) }) -join ';'
+          if (Get-Command node -ErrorAction SilentlyContinue) { throw "node hâlâ PATH'te" }
+          "node PATH'te yok"
+          Start-Process -FilePath "dist\YH-Launcher.exe" -ArgumentList '--hidden'
+          Start-Sleep -Seconds 25
+          $procs = Get-Process -Name 'YH Launcher' -ErrorAction SilentlyContinue
+          if (-not $procs) { throw 'YH-Launcher.exe çalışmıyor' }
+          if (-not (Test-Path "$env:APPDATA\YH Launcher\plugins")) { throw 'uygulama başlatılamadı (eklenti klasörü yok)' }
+          "çalışıyor: $($procs.Count) süreç, eklentiler yüklendi"
+          Get-Process -Name 'YH Launcher', 'YH-Launcher' -ErrorAction SilentlyContinue | Stop-Process -Force
+
+      - name: Kurulum dosyasını sessiz kur ve çalıştır
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "dist\YH-Launcher-Setup.exe" -ArgumentList '/S' -Wait
+          $exe = "$env:LOCALAPPDATA\Programs\YH Launcher\YH Launcher.exe"
+          if (-not (Test-Path $exe)) { throw "kurulum sonrası exe yok: $exe" }
+          Get-Process -Name 'YH Launcher' -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Process -FilePath $exe -ArgumentList '--hidden'
+          Start-Sleep -Seconds 15
+          if (-not (Get-Process -Name 'YH Launcher' -ErrorAction SilentlyContinue)) { throw 'kurulan uygulama çalışmıyor' }
+          "kurulum ve çalıştırma başarılı"
+          Get-Process -Name 'YH Launcher' -ErrorAction SilentlyContinue | Stop-Process -Force
 
       - uses: actions/upload-artifact@v4
         with:

@@ -37,7 +37,7 @@
       "icon": "assets/icon.png"
     },
     "nsis": {
-      "artifactName": "YH-Launcher-Setup-${version}.${ext}",
+      "artifactName": "YH-Launcher-Setup.${ext}",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
@@ -45,7 +45,7 @@
       "runAfterFinish": true
     },
     "portable": {
-      "artifactName": "YH-Launcher-Portable-${version}.${ext}"
+      "artifactName": "YH-Launcher.${ext}"
     },
     "linux": {
       "target": [
@@ -54,7 +54,7 @@
         "rpm"
       ],
       "executableName": "yh-launcher",
-      "artifactName": "YH-Launcher-${version}-${arch}.${ext}",
+      "artifactName": "YH-Launcher-${arch}.${ext}",
       "icon": "assets/icon.png",
       "category": "Utility",
       "synopsis": "Eklentilerle genişleyen uygulama başlatıcısı",

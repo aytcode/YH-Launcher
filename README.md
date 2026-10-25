@@ -18,6 +18,22 @@
 
 `Alt + Space` ile açılır; uygulama ararsın, dosya bulursun, site açarsın, komut çalıştırırsın. Klavyeden elini kaldırmadan.
 
+## İndir
+
+**Windows:** [**YH-Launcher.exe**](https://github.com/aytcode/YH-Launcher/releases/latest/download/YH-Launcher.exe) — tek dosya. İndir, çift tıkla, çalışsın. Node.js ya da başka bir şey kurmana gerek yok.
+
+| | Dosya | |
+|---|---|---|
+| Windows (tek exe, kurulumsuz) | [YH-Launcher.exe](https://github.com/aytcode/YH-Launcher/releases/latest/download/YH-Launcher.exe) | Çift tıkla çalışır |
+| Windows (kurulum) | [YH-Launcher-Setup.exe](https://github.com/aytcode/YH-Launcher/releases/latest/download/YH-Launcher-Setup.exe) | Başlat menüsüne eklenir, kaldırılabilir |
+| Ubuntu / Debian / Mint | [YH-Launcher-amd64.deb](https://github.com/aytcode/YH-Launcher/releases/latest/download/YH-Launcher-amd64.deb) | `sudo apt install ./YH-Launcher-amd64.deb` |
+| Fedora / openSUSE | [YH-Launcher-x86_64.rpm](https://github.com/aytcode/YH-Launcher/releases/latest/download/YH-Launcher-x86_64.rpm) | `sudo dnf install ./YH-Launcher-x86_64.rpm` |
+| Diğer Linux | [YH-Launcher-x86_64.AppImage](https://github.com/aytcode/YH-Launcher/releases/latest/download/YH-Launcher-x86_64.AppImage) | `chmod +x` yap, çalıştır |
+
+Bağlantılar her zaman en son sürümü indirir. Tüm sürümler: [Releases](https://github.com/aytcode/YH-Launcher/releases).
+
+> **Windows uyarısı:** Exe henüz kod imzalı değil. SmartScreen ilk açılışta "Windows bilgisayarınızı korudu" diyebilir → **Ek bilgi › Yine de çalıştır**. Akıllı Uygulama Denetimi (Smart App Control) açık bilgisayarlarda imzasız uygulamalar engellenir.
+
 ## Özellikler
 
 | | |
@@ -54,32 +70,7 @@
 | `Tab` | Otomatik tamamla |
 | `Esc` | Temizle / kapat |
 
-## Kurulum (geliştirme)
-
-Gereksinim: [Node.js](https://nodejs.org) 20+
-
-```bash
-git clone https://github.com/aytcode/YH-Launcher.git
-cd YH-Launcher
-npm install
-npm start
-```
-
-## İndir ve kur
-
-Hazır dosyalar [Releases](https://github.com/aytcode/YH-Launcher/releases) sayfasında (ya da her derlemenin [Actions](https://github.com/aytcode/YH-Launcher/actions) çıktılarında).
-
-| Sistem | Dosya | Kurulum |
-|---|---|---|
-| Windows | `YH-Launcher-Setup-x.y.z.exe` | Çalıştır, kur. Başlat menüsüne eklenir |
-| Windows | `YH-Launcher-Portable-x.y.z.exe` | Kurulum yok, çift tıkla çalışır |
-| Ubuntu / Debian / Mint / Pop!_OS | `.deb` | `sudo apt install ./YH-Launcher-*.deb` |
-| Fedora / openSUSE | `.rpm` | `sudo dnf install ./YH-Launcher-*.rpm` |
-| Diğer dağıtımlar | `.AppImage` | `chmod +x YH-Launcher-*.AppImage && ./YH-Launcher-*.AppImage` |
-
-> **Windows uyarısı:** Exe dosyaları henüz kod imzalı değil. Windows SmartScreen ilk açılışta "Windows bilgisayarınızı korudu" diyebilir (Ek bilgi › Yine de çalıştır). **Akıllı Uygulama Denetimi** (Smart App Control) açık olan bilgisayarlarda imzasız uygulamalar tamamen engellenir; bunun kalıcı çözümü kod imzalama sertifikasıdır.
-
-### Linux notları
+## Linux notları
 
 - **Kısayol:** GNOME ve KDE `Alt+Space`'i pencere menüsü için kullanır. YH Launcher bunu algılarsa sırayla `Ctrl+Alt+Space`, `Super+Space`, `Ctrl+Shift+Space` dener ve bildirim gösterir. İstersen Ayarlar'dan değiştir.
 - **Wayland:** Global kısayollar masaüstü portalı üzerinden denenir. Çalışmazsa sistem ayarlarında (Klavye › Özel kısayollar) şu komuta bir kısayol ata — pencereyi açıp kapatır:
@@ -90,7 +81,20 @@ Hazır dosyalar [Releases](https://github.com/aytcode/YH-Launcher/releases) sayf
 - **Tepsi simgesi:** GNOME'da tepsi simgesi için "AppIndicator" eklentisi gerekir; simge olmadan da kısayolla her şey çalışır.
 - Uygulama kaldırma `pkexec` ile yetki ister (apt, dnf, zypper, pacman, flatpak, snap desteklenir).
 
-## Paketleme
+## Geliştirme
+
+> Bu bölüm sadece kodu değiştirmek isteyenler için. Uygulamayı **kullanmak** için yukarıdaki exe yeterli.
+
+Gereksinim: [Node.js](https://nodejs.org) 20+
+
+```bash
+git clone https://github.com/aytcode/YH-Launcher.git
+cd YH-Launcher
+npm install
+npm start
+```
+
+### Paketleme
 
 ```bash
 npm run dist:win     # Windows: kurulum + taşınabilir exe
