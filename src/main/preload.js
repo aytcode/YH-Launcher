@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('yh', {
   home: () => ipcRenderer.invoke('home'),
   run: (id, mods) => ipcRenderer.invoke('run', id, mods),
   actions: (id) => ipcRenderer.invoke('actions', id),
+  preview: (id) => ipcRenderer.invoke('preview', id),
   action: (id, actionId) => ipcRenderer.invoke('action', id, actionId),
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (patch) => ipcRenderer.invoke('settings:set', patch),

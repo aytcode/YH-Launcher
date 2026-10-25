@@ -1380,3 +1380,203 @@ html[data-selection='accent'] .live-preview .lp-row.sel small {
   color: var(--text-3);
   font-size: 11.5px;
 }
+
+/* ------------------------------------------------ dosya önizleme (Quick Look gibi) */
+
+.content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.preview {
+  display: none;
+}
+
+.panel.with-preview .list {
+  flex: 0 0 54%;
+  min-width: 0;
+}
+
+.panel.with-preview .preview {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  border-left: 1px solid var(--hairline);
+  overflow: hidden;
+}
+
+.pv {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  padding: 16px 16px 12px;
+  animation: fade-in 140ms ease;
+}
+
+.pv-hero {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  margin-bottom: 12px;
+}
+
+.pv-hero img.pv-image {
+  max-width: 100%;
+  max-height: 190px;
+  border-radius: 10px;
+  object-fit: contain;
+  box-shadow: 0 0 0 0.5px var(--stroke), 0 6px 18px rgba(0, 0, 0, 0.28);
+  /* saydam resimler için hafif dama deseni */
+  background: repeating-conic-gradient(rgba(128, 128, 128, 0.14) 0 25%, transparent 0 50%) 50% / 14px 14px;
+}
+
+.pv-hero img.pv-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.pv-hero .sym-tile,
+.pv-hero .letter {
+  width: 64px !important;
+  height: 64px !important;
+  font-size: 26px;
+}
+
+.pv-title {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-align: center;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pv-kind {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+.pv-body {
+  flex: 1;
+  min-height: 0;
+  margin-top: 12px;
+  overflow: auto;
+}
+
+.pv-body::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.pv-body::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 10px;
+  background: var(--fill-sel) padding-box;
+}
+
+.pv-code {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--fill);
+  box-shadow: inset 0 0 0 0.5px var(--stroke);
+  color: var(--text-2);
+  font: 11px/1.55 'Cascadia Code', 'SF Mono', 'JetBrains Mono', ui-monospace, monospace;
+  white-space: pre;
+  tab-size: 2;
+  user-select: text;
+}
+
+.pv-more {
+  padding: 6px 2px 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+
+.pv-entries {
+  display: flex;
+  flex-direction: column;
+}
+
+.pv-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pv-entry svg {
+  flex: none;
+  color: var(--text-3);
+}
+
+.pv-entry.dir svg {
+  color: #5ac8fa;
+}
+
+.pv-meta {
+  flex: none;
+  margin-top: 12px;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 0.5px var(--stroke);
+  overflow: hidden;
+}
+
+.pv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.pv-row:last-child {
+  border-bottom: 0;
+}
+
+.pv-row span:first-child {
+  flex: none;
+  color: var(--text-3);
+}
+
+.pv-row span:last-child {
+  min-width: 0;
+  color: var(--text-2);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pv-row.path span:last-child {
+  direction: rtl; /* uzun yollarda sonu (dosya adı tarafı) görünsün */
+}
+
+.pv-body::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.pv-loading {
+  margin: auto;
+  color: var(--text-3);
+  font-size: 12px;
+}

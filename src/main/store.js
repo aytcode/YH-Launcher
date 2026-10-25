@@ -14,6 +14,7 @@ const DEFAULTS = {
   density: 'normal', // compact | normal | comfortable
   maxResults: 9,
   fileSearch: true,
+  filePreview: true, // aramada dosya varken sağda önizleme paneli
   extraFileRoots: [],
   defaultEngine: 'g',
   autoLearnSites: true,

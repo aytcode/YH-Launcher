@@ -8,6 +8,7 @@ const toastEl = $('#toast');
 const modeEl = $('#mode');
 const primaryHintEl = $('#primary-hint');
 const primaryLabelEl = $('#primary-label');
+const previewEl = $('#preview');
 
 const state = { flat: [], sel: 0, token: 0, actions: null, actSel: 0, actItem: null, cfg: null, view: null };
 let hlEl = null;
@@ -114,6 +115,10 @@ function render(res, q) {
   if (!state.flat.length) {
     html += `<div class="empty"><b>Sonuç yok</b><span>"${esc(q.trim())}" için bir şey bulunamadı</span></div>`;
   }
+  // Sonuçlarda dosya/klasör varsa sağda önizleme paneli (liste genişliği değişmeden önce ayarla)
+  state.previewMode = state.cfg?.filePreview !== false && !!q.trim() && state.flat.some((it) => it.type === 'file' || it.type === 'folder');
+  panelEl.classList.toggle('with-preview', state.previewMode);
+  if (!state.previewMode) previewEl.innerHTML = '';
   innerEl.innerHTML = html;
   hlEl = $('#hl');
   innerEl.querySelectorAll('img[data-fallback]').forEach((img) =>
@@ -171,6 +176,100 @@ function select(i, instant = false) {
     el.scrollIntoView({ block: 'nearest' });
   }
   updateFooter();
+  schedulePreview();
+}
+
+// ---------------------------------------------------------------- önizleme
+
+let previewTimer;
+let previewToken = 0;
+
+const fmtSize = (b) => {
+  if (b == null) return '';
+  const u = ['bayt', 'KB', 'MB', 'GB'];
+  let i = 0;
+  while (b >= 1024 && i < u.length - 1) {
+    b /= 1024;
+    i++;
+  }
+  return `${i ? b.toLocaleString('tr-TR', { maximumFractionDigits: 1 }) : b} ${u[i]}`;
+};
+const fmtDate = (ms) => new Date(ms).toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' });
+const parentDir = (p) => p.replace(/[\\/][^\\/]*$/, '') || p;
+
+function heroIcon(item, src) {
+  const icon = src || item.icon;
+  if (icon && !icon.startsWith('sym:')) return `<img class="pv-icon" src="${esc(icon)}" alt="">`;
+  return iconHtml(item, 64);
+}
+
+function metaRows(rows) {
+  const list = rows.filter(([, v]) => v);
+  // Yollarda sonu (dosya adı tarafı) görünsün diye sadece onlar sağdan kısaltılır
+  const row = ([k, v]) => `<div class="pv-row${/[\\/]/.test(v) ? ' path' : ''}"><span>${k}</span><span title="${esc(v)}">${esc(v)}</span></div>`;
+  return list.length ? `<div class="pv-meta">${list.map(row).join('')}</div>` : '';
+}
+
+// Dosya olmayan öğeler (uygulama, site, komut) için kart
+function genericPreview(item) {
+  return `<div class="pv">
+    <div class="pv-hero">${heroIcon(item)}</div>
+    <div class="pv-title">${esc(item.title)}</div>
+    <div class="pv-kind">${esc(item.label || '')}</div>
+    <div class="pv-body"></div>
+    ${metaRows([[item.type === 'site' || item.type === 'web' ? 'Adres' : 'Konum', item.subtitle]])}
+  </div>`;
+}
+
+function filePreview(d, item) {
+  const EXT = d.ext ? d.ext.toUpperCase() : '';
+  let hero = '';
+  let kind = '';
+  let body = '';
+  if (d.kind === 'image') {
+    hero = `<img class="pv-image" src="${esc(d.src)}" alt="">`;
+    kind = [`${EXT} görüntüsü`, d.width && `${d.width}×${d.height}`, fmtSize(d.size)].filter(Boolean).join(' · ');
+  } else if (d.kind === 'text') {
+    kind = `${EXT ? `${EXT} dosyası` : 'Metin'} · ${fmtSize(d.size)}`;
+    body = `<pre class="pv-code">${esc(d.text)}</pre>${d.truncated ? '<div class="pv-more">Dosyanın başı gösteriliyor</div>' : ''}`;
+  } else if (d.kind === 'folder') {
+    hero = symTile('folder', 64);
+    kind = `Klasör · ${d.count} öğe`;
+    body = `<div class="pv-entries">${d.entries
+      .map((e) => `<div class="pv-entry${e.dir ? ' dir' : ''}">${svgIcon(e.dir ? 'folder' : 'file', 14)}${esc(e.name)}</div>`)
+      .join('')}${d.count > d.entries.length ? `<div class="pv-more">+${d.count - d.entries.length} öğe daha</div>` : ''}</div>`;
+  } else {
+    hero = heroIcon(item, d.icon);
+    kind = [EXT ? `${EXT} dosyası` : 'Dosya', fmtSize(d.size)].filter(Boolean).join(' · ');
+  }
+  return `<div class="pv">
+    ${hero ? `<div class="pv-hero">${hero}</div>` : ''}
+    <div class="pv-title">${esc(d.name)}</div>
+    <div class="pv-kind">${esc(kind)}</div>
+    <div class="pv-body">${body}</div>
+    ${metaRows([['Değiştirilme', fmtDate(d.modified)], ['Konum', parentDir(d.path)]])}
+  </div>`;
+}
+
+function schedulePreview() {
+  if (!state.previewMode) return;
+  const item = current();
+  const token = ++previewToken;
+  clearTimeout(previewTimer);
+  if (!item) {
+    previewEl.innerHTML = '';
+    return;
+  }
+  if (!item.path) {
+    previewEl.innerHTML = genericPreview(item);
+    return;
+  }
+  // Ok tuşuyla hızlı gezinirken her satırda dosya okumasın
+  previewTimer = setTimeout(async () => {
+    const data = await yh.preview(item.id).catch(() => null);
+    if (token !== previewToken) return;
+    previewEl.innerHTML = data ? filePreview(data, item) : genericPreview(item);
+  }, 70);
 }
 
 // Izgara + liste karışık düzende ok tuşları: en yakın komşuya geometrik olarak git
@@ -426,6 +525,9 @@ yh.on('hidden', () => {
   state.flat = [];
   innerEl.innerHTML = '';
   hlEl = null;
+  previewToken++;
+  previewEl.innerHTML = '';
+  panelEl.classList.remove('with-preview');
   yh.trimMemory();
 });
 

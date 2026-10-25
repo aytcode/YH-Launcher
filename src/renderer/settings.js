@@ -47,7 +47,7 @@ const Settings = (() => {
       cfg = await yh.getSettings();
       if (which) tab = which;
       api.isOpen = true;
-      document.getElementById('list').classList.add('hidden');
+      document.querySelector('.content').classList.add('hidden');
       document.querySelector('.searchbar').classList.add('hidden');
       document.getElementById('panel').classList.add('in-settings');
       el.classList.remove('hidden');
@@ -58,7 +58,7 @@ const Settings = (() => {
       api.capturing = false;
       el.classList.add('hidden');
       document.getElementById('panel').classList.remove('in-settings');
-      document.getElementById('list').classList.remove('hidden');
+      document.querySelector('.content').classList.remove('hidden');
       document.querySelector('.searchbar').classList.remove('hidden');
       if (focus) {
         document.getElementById('q').focus();
@@ -124,6 +124,7 @@ const Settings = (() => {
         ${group(
           row('Sık ziyaret edilen siteleri öğren', 'Yazarak 3 kez açtığın siteler Siteler listesine eklenir', sw('autoLearnSites', cfg.autoLearnSites)) +
             row('Dosya araması', 'Ana klasörünü 5 seviye derinliğe kadar indeksler', sw('fileSearch', cfg.fileSearch)) +
+            row('Dosya önizlemesi', 'Aramada dosya varken sağda resim, metin ve klasör önizlemesi', sw('filePreview', cfg.filePreview)) +
             roots.replace(/class="entry"/g, 'class="entry row"') +
             `<div class="row"><div class="row-text"><small>Ek arama klasörleri (ör. D:\\Projeler)</small></div><button class="btn" id="add-root">${svgIcon('plus', 13)} Klasör ekle</button></div>`,
           'Akıllı özellikler'

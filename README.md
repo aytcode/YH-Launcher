@@ -18,6 +18,21 @@
 
 `Alt + Space` ile açılır; uygulama ararsın, dosya bulursun, site açarsın, komut çalıştırırsın. Klavyeden elini kaldırmadan.
 
+<p align="center">
+  <img src="docs/screenshots/ana-ekran.png" width="720" alt="YH Launcher ana ekranı: sabitlenenler ve sık kullanılan siteler">
+</p>
+
+## Önizleme
+
+| | |
+|:---:|:---:|
+| <img src="docs/screenshots/onizleme-resim.png" alt="Resim önizlemesi"> | <img src="docs/screenshots/onizleme-kod.png" alt="Kod önizlemesi"> |
+| **Dosya önizleme** — resimler | **Dosya önizleme** — kod ve metin |
+| <img src="docs/screenshots/eylemler.png" alt="Eylemler menüsü"> | <img src="docs/screenshots/gorunum.png" alt="Görünüm ayarları"> |
+| **Eylemler** (`Ctrl+K`) — sabitle, gizle, kaldır | **Görünüm** — tema, vurgu rengi, cam, yoğunluk |
+| <img src="docs/screenshots/eklenti-renkli.png" alt="Eklenti ve renkli seçim"> | <img src="docs/screenshots/acik-tema.png" alt="Açık tema"> |
+| **Eklentiler** — mor vurgu, renkli seçim | **Açık tema** — yeşil vurgu, `yt` kısayolu |
+
 ## İndir
 
 **Windows:** [**YH-Launcher.exe**](https://github.com/aytcode/YH-Launcher/releases/latest/download/YH-Launcher.exe) — tek dosya. İndir, çift tıkla, çalışsın. Node.js ya da başka bir şey kurmana gerek yok.
@@ -40,6 +55,7 @@ Bağlantılar her zaman en son sürümü indirir. Tüm sürümler: [Releases](ht
 |---|---|
 | **Uygulama başlatma** | Discord, VS Code, Steam… Başlat menüsü + Microsoft Store uygulamaları (Windows), `.desktop` + Flatpak + Snap (Linux) |
 | **Dosya arama** | Ana klasörün arka planda indekslenir. `C:\` veya `~/` yazarak klasörlerde gezin |
+| **Dosya önizleme** | Seçili dosyanın içeriği sağda: resimler, kod/metin, klasör içeriği (macOS Quick Look gibi) |
 | **Sabitleme** | Sık kullandıklarını `Ctrl+P` ile sabitle, `Ctrl+↑/↓` ile sırala; ana ekranda en üstte durur |
 | **Uygulama kaldırma** | `Ctrl+Delete` → uygulamanın kendi kaldırıcısı (Windows kayıt defteri / Store) ya da paket yöneticisi (apt, dnf, pacman, flatpak, snap) |
 | **Sık kullanılan siteler** | Ana ekranda en çok açtığın siteler. Yazarak 3 kez açtığın siteler otomatik eklenir |
@@ -50,7 +66,8 @@ Bağlantılar her zaman en son sürümü indirir. Tüm sürümler: [Releases](ht
 | **Akıllı sıralama** | Sık ve yakın zamanda kullandıkların otomatik olarak öne çıkar |
 | **Eklenti sistemi** | Topluluğun yazdığı eklentilerle genişler (bkz. [PLUGINS.md](PLUGINS.md)) |
 | **Gizleme** | İstemediğin sonuçları `Ctrl+H` ile gizle |
-| **Tema** | Koyu / açık / sistem |
+| **Görünüm** | Koyu / açık / otomatik tema, 9 vurgu rengi, cam yoğunluğu, satır yoğunluğu |
+| **Hafif** | Boştayken %0 CPU, sağ altta simge yok (isteğe bağlı), donanım hızlandırma varsayılan kapalı |
 
 ## Klavye kısayolları
 
@@ -113,6 +130,7 @@ src/
   main/
     main.js          pencere, kısayol, tepsi, çalıştırma ve eylemler
     search.js        sağlayıcıları birleştirip sıralar
+    preview.js       dosya önizleme (resim, metin, klasör)
     store.js         ayarlar ve kullanım geçmişi (userData/settings.json)
     uninstall.js     Windows / Linux kaldırma
     icons.js         uygulama ve dosya simgeleri

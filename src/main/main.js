@@ -5,6 +5,7 @@ const os = require('os');
 const Store = require('./store');
 const Search = require('./search');
 const uninstall = require('./uninstall');
+const { preview } = require('./preview');
 const { isWin, runDetached, spawnDetached, runInTerminal, powershell, psQuote } = require('./util');
 
 const isLinux = process.platform === 'linux';
@@ -400,6 +401,11 @@ function setupIpc() {
     const item = search.get(id);
     return item ? runItem(item, mods) : { keepOpen: true };
   });
+  // Sadece arama sonuçlarındaki dosya/klasörler önizlenir (renderer keyfi yol isteyemez)
+  ipcMain.handle('preview', (_e, id) => {
+    const item = search.get(id);
+    return item?.path ? preview(item) : null;
+  });
   ipcMain.handle('actions', (_e, id) => {
     const item = search.get(id);
     return item ? actionsFor(item) : [];
@@ -425,7 +431,7 @@ function setupIpc() {
         tray = null;
       }
     }
-    const allowed = ['hotkey', 'launchAtStartup', 'showTray', 'hardwareAcceleration', 'theme','accent', 'selection', 'glass', 'density','maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
+    const allowed = ['hotkey', 'launchAtStartup', 'showTray', 'filePreview','hardwareAcceleration', 'theme','accent', 'selection', 'glass', 'density','maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
     for (const k of Object.keys(patch)) if (allowed.includes(k)) store.data[k] = patch[k];
     store.save();
     if ('fileSearch' in patch || 'extraFileRoots' in patch) search.files.refresh();
