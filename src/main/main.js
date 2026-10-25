@@ -5,11 +5,18 @@ const os = require('os');
 const Store = require('./store');
 const Search = require('./search');
 const uninstall = require('./uninstall');
-const { hostOf } = require('./providers/web');
 const { isWin, runDetached, spawnDetached, runInTerminal, powershell, psQuote } = require('./util');
 
-if (process.platform === 'linux') app.commandLine.appendSwitch('enable-transparent-visuals');
+const isLinux = process.platform === 'linux';
+if (isLinux) {
+  app.commandLine.appendSwitch('enable-transparent-visuals');
+  // Wayland'de global kısayollar XDG portalı üzerinden çalışır
+  app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
+}
 if (!app.requestSingleInstanceLock()) app.quit();
+
+// Varsayılan kısayol başka bir program tarafından kullanılıyorsa sırayla denenir
+const FALLBACK_HOTKEYS = ['Alt+Space', 'Ctrl+Alt+Space', 'Super+Space', 'Ctrl+Shift+Space'];
 
 const ASSETS = path.join(__dirname, '../../assets');
 const SAFE_PROTOCOLS = /^(https?|mailto|ms-settings|discord|steam|spotify|vscode|file):/i;
@@ -66,6 +73,8 @@ function show(view = 'search') {
   const area = screen.getDisplayNearestPoint(point).workArea;
   const [w] = win.getSize();
   win.setPosition(Math.round(area.x + (area.width - w) / 2), Math.round(area.y + area.height * 0.16));
+  // Linux'ta hangi çalışma alanındaysan orada açılsın
+  if (isLinux) win.setVisibleOnAllWorkspaces(true);
   win.show();
   win.focus();
   win.webContents.send('shown', view);
@@ -122,8 +131,27 @@ function registerHotkey(accelerator) {
   return false;
 }
 
+// Kayıtlı kısayol alınamazsa (ör. GNOME/KDE Alt+Space'i kullanıyor) bir yedeğini dene
+function registerStartupHotkey() {
+  const saved = store.get('hotkey');
+  if (registerHotkey(saved)) return;
+  const alt = FALLBACK_HOTKEYS.find((k) => k !== saved && registerHotkey(k));
+  if (alt) {
+    store.set('hotkey', alt);
+    tray?.setToolTip(`YH Launcher (${alt})`);
+    notify('Kısayol değiştirildi', `${saved} başka bir uygulama tarafından kullanılıyor; ${alt} atandı. Ayarlardan değiştirebilirsin.`);
+  } else {
+    notify(
+      'Kısayol kaydedilemedi',
+      isLinux
+        ? 'Sistem ayarlarından "yh-launcher --toggle" komutuna bir klavye kısayolu ata.'
+        : `${saved} kullanılamıyor. Ayarlardan başka bir kısayol seç.`
+    );
+  }
+}
+
 function setLaunchAtStartup(enabled) {
-  if (process.platform === 'linux') {
+  if (isLinux) {
     const dir = path.join(os.homedir(), '.config/autostart');
     const file = path.join(dir, 'yh-launcher.desktop');
     if (!enabled) return fs.rmSync(file, { force: true });
@@ -131,7 +159,9 @@ function setLaunchAtStartup(enabled) {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(file, `[Desktop Entry]\nType=Application\nName=YH Launcher\nExec="${exec}" --hidden\nIcon=yh-launcher\nX-GNOME-Autostart-enabled=true\n`);
   } else {
-    app.setLoginItemSettings({ openAtLogin: enabled, args: ['--hidden'] });
+    // Taşınabilir (portable) sürüm her açılışta geçici klasöre açılır; asıl exe yolunu kaydet
+    const exe = process.env.PORTABLE_EXECUTABLE_FILE;
+    app.setLoginItemSettings({ openAtLogin: enabled, args: ['--hidden'], ...(exe ? { path: exe } : {}) });
   }
 }
 
@@ -152,7 +182,7 @@ async function runItem(item, mods = {}) {
       break;
     case 'linux-app':
       if (a.terminal) runInTerminal(a.exec);
-      else runDetached(a.exec, { cwd: os.homedir() });
+      else runDetached(a.exec, { cwd: a.cwd && fs.existsSync(a.cwd) ? a.cwd : os.homedir() });
       break;
     case 'url': {
       openUrl(a.url);
@@ -414,7 +444,8 @@ function createTray() {
 
 // ---------------------------------------------------------------- başlat
 
-app.on('second-instance', () => show());
+// "yh-launcher --toggle" (ör. Wayland'de sistem kısayoluna bağlanır) aç/kapat yapar
+app.on('second-instance', (_e, argv) => (argv.includes('--toggle') ? toggle() : show()));
 
 app.whenReady().then(async () => {
   if (isWin) app.setAppUserModelId('com.yazilimhub.launcher');
@@ -433,10 +464,7 @@ app.whenReady().then(async () => {
   createTray();
   await search.init();
 
-  const hotkey = store.get('hotkey');
-  if (!registerHotkey(hotkey)) {
-    notify('Kısayol kaydedilemedi', `${hotkey} başka bir uygulama tarafından kullanılıyor. Ayarlardan değiştir.`);
-  }
+  registerStartupHotkey();
   // Yeni kurulan uygulamaları yakalamak için ara ara tara
   setInterval(() => search.apps.refresh().catch(() => {}), 10 * 60 * 1000);
   setInterval(() => search.files.refresh().catch(() => {}), 30 * 60 * 1000);

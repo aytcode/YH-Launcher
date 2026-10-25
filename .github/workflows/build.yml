@@ -1,0 +1,119 @@
+name: Derle ve test et
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Sistem paketleri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb rpm libgtk-3-0 libnss3 libgbm1 libnotify4 libxss1 libxtst6 libasound2t64
+
+      - name: Duman testi (gerçek bir .desktop uygulamasıyla)
+        env:
+          YH_EXPECT_APP: YH Test Uygulaması
+        run: |
+          mkdir -p ~/.local/share/applications
+          printf '[Desktop Entry]\nType=Application\nName=YH Test Uygulaması\nExec=true %%U\nIcon=utilities-terminal\n' > ~/.local/share/applications/yh-test.desktop
+          xvfb-run -a npx electron --no-sandbox test/smoke.cjs
+
+      - name: Paketle (AppImage, deb, rpm)
+        run: npm run dist:linux
+
+      - name: deb paketini kur ve çalıştır
+        run: |
+          sudo apt-get install -y ./dist/*.deb
+          test -x /usr/bin/yh-launcher
+          grep -q "Name=YH Launcher" /usr/share/applications/yh-launcher.desktop
+          # 15 sn boyunca çökmeden çalışıyorsa başarılı (timeout = 124)
+          set +e
+          timeout 15 xvfb-run -a yh-launcher --hidden
+          code=$?
+          set -e
+          echo "çıkış kodu: $code"
+          test $code -eq 124
+
+      - name: AppImage çalıştır
+        run: |
+          chmod +x dist/*.AppImage
+          set +e
+          timeout 15 xvfb-run -a dist/*.AppImage --appimage-extract-and-run --no-sandbox --hidden
+          code=$?
+          set -e
+          echo "çıkış kodu: $code"
+          test $code -eq 124
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YH-Launcher-Linux
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekran-goruntuleri-linux
+          path: test/output
+
+      - name: Sürüm yayınla
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Duman testi
+        run: npx electron test/smoke.cjs
+
+      - name: Paketle (kurulum + taşınabilir exe)
+        run: npm run dist:win
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YH-Launcher-Windows
+          path: dist/*.exe
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekran-goruntuleri-windows
+          path: test/output
+
+      - name: Sürüm yayınla
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe

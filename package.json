@@ -4,14 +4,21 @@
   "version": "1.0.0",
   "description": "YazılımHub topluluğunun Windows ve Linux için eklentilerle genişleyen uygulama başlatıcısı.",
   "main": "src/main/main.js",
-  "author": "YazılımHub (discord.gg/yazilimhub)",
+  "homepage": "https://github.com/aytcode/YH-Launcher",
+  "repository": "github:aytcode/YH-Launcher",
+  "author": {
+    "name": "YazılımHub",
+    "email": "83597784+aytcode@users.noreply.github.com",
+    "url": "https://discord.gg/yazilimhub"
+  },
   "license": "MIT",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "dist": "electron-builder",
-    "dist:win": "electron-builder --win",
-    "dist:linux": "electron-builder --linux"
+    "test": "electron test/smoke.cjs",
+    "dist": "electron-builder --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
   },
   "build": {
     "appId": "com.yazilimhub.launcher",
@@ -24,23 +31,47 @@
     ],
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "portable"
       ],
       "icon": "assets/icon.png"
     },
     "nsis": {
+      "artifactName": "YH-Launcher-Setup-${version}.${ext}",
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "YH Launcher"
+      "shortcutName": "YH Launcher",
+      "runAfterFinish": true
+    },
+    "portable": {
+      "artifactName": "YH-Launcher-Portable-${version}.${ext}"
     },
     "linux": {
       "target": [
         "AppImage",
-        "deb"
+        "deb",
+        "rpm"
       ],
+      "executableName": "yh-launcher",
+      "artifactName": "YH-Launcher-${version}-${arch}.${ext}",
       "icon": "assets/icon.png",
       "category": "Utility",
-      "maintainer": "YazılımHub"
+      "synopsis": "Eklentilerle genişleyen uygulama başlatıcısı",
+      "maintainer": "YazılımHub <83597784+aytcode@users.noreply.github.com>",
+      "desktop": {
+        "entry": {
+          "Name": "YH Launcher",
+          "Comment": "Uygulama, dosya, site ve komut ara",
+          "Keywords": "launcher;search;başlatıcı;arama;yazilimhub;",
+          "StartupWMClass": "YH Launcher"
+        }
+      }
+    },
+    "deb": {
+      "recommends": [
+        "libayatana-appindicator3-1"
+      ]
     }
   },
   "devDependencies": {

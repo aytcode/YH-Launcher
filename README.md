@@ -9,6 +9,11 @@
   <a href="https://discord.gg/yazilimhub">discord.gg/yazilimhub</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/aytcode/YH-Launcher/actions/workflows/build.yml"><img src="https://github.com/aytcode/YH-Launcher/actions/workflows/build.yml/badge.svg" alt="Derleme durumu"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-4f8cff" alt="Windows | Linux">
+</p>
+
 ---
 
 `Alt + Space` ile açılır; uygulama ararsın, dosya bulursun, site açarsın, komut çalıştırırsın. Klavyeden elini kaldırmadan.
@@ -54,26 +59,48 @@
 Gereksinim: [Node.js](https://nodejs.org) 20+
 
 ```bash
-git clone <bu-depo>
-cd yh-launcher
+git clone https://github.com/aytcode/YH-Launcher.git
+cd YH-Launcher
 npm install
 npm start
 ```
 
-## Paketleme
+## İndir ve kur
 
-```bash
-npm run dist:win     # Windows kurulum dosyası (.exe, NSIS)
-npm run dist:linux   # AppImage + .deb
-```
+Hazır dosyalar [Releases](https://github.com/aytcode/YH-Launcher/releases) sayfasında (ya da her derlemenin [Actions](https://github.com/aytcode/YH-Launcher/actions) çıktılarında).
 
-Çıktılar `dist/` klasörüne yazılır.
+| Sistem | Dosya | Kurulum |
+|---|---|---|
+| Windows | `YH-Launcher-Setup-x.y.z.exe` | Çalıştır, kur. Başlat menüsüne eklenir |
+| Windows | `YH-Launcher-Portable-x.y.z.exe` | Kurulum yok, çift tıkla çalışır |
+| Ubuntu / Debian / Mint / Pop!_OS | `.deb` | `sudo apt install ./YH-Launcher-*.deb` |
+| Fedora / openSUSE | `.rpm` | `sudo dnf install ./YH-Launcher-*.rpm` |
+| Diğer dağıtımlar | `.AppImage` | `chmod +x YH-Launcher-*.AppImage && ./YH-Launcher-*.AppImage` |
+
+> **Windows uyarısı:** Exe dosyaları henüz kod imzalı değil. Windows SmartScreen ilk açılışta "Windows bilgisayarınızı korudu" diyebilir (Ek bilgi › Yine de çalıştır). **Akıllı Uygulama Denetimi** (Smart App Control) açık olan bilgisayarlarda imzasız uygulamalar tamamen engellenir; bunun kalıcı çözümü kod imzalama sertifikasıdır.
 
 ### Linux notları
 
-- GNOME ve KDE `Alt+Space`'i pencere menüsü için kullanır. Ya sistem kısayolunu kapat ya da Ayarlar'dan başka bir kısayol seç (ör. `Super+Space`).
-- Wayland'de global kısayollar her masaüstünde çalışmayabilir; bu durumda sistem ayarlarından `yh-launcher` komutuna özel bir kısayol atayabilirsin (uygulama tek örnek çalışır, ikinci çağrı pencereyi açar).
-- Uygulama kaldırma `pkexec` ile yetki ister.
+- **Kısayol:** GNOME ve KDE `Alt+Space`'i pencere menüsü için kullanır. YH Launcher bunu algılarsa sırayla `Ctrl+Alt+Space`, `Super+Space`, `Ctrl+Shift+Space` dener ve bildirim gösterir. İstersen Ayarlar'dan değiştir.
+- **Wayland:** Global kısayollar masaüstü portalı üzerinden denenir. Çalışmazsa sistem ayarlarında (Klavye › Özel kısayollar) şu komuta bir kısayol ata — pencereyi açıp kapatır:
+  ```bash
+  yh-launcher --toggle
+  ```
+- **AppImage + Ubuntu 24.04:** AppImage açılmazsa (sandbox hatası) `--no-sandbox` ile çalıştır ya da `.deb` paketini kullan.
+- **Tepsi simgesi:** GNOME'da tepsi simgesi için "AppIndicator" eklentisi gerekir; simge olmadan da kısayolla her şey çalışır.
+- Uygulama kaldırma `pkexec` ile yetki ister (apt, dnf, zypper, pacman, flatpak, snap desteklenir).
+
+## Paketleme
+
+```bash
+npm run dist:win     # Windows: kurulum + taşınabilir exe
+npm run dist:linux   # Linux: AppImage + deb + rpm (Linux'ta çalıştır)
+npm test             # duman testi: launcher'ı açar, gerçek sorgularla dener
+```
+
+Çıktılar `dist/` klasörüne yazılır. Linux paketleri Windows'ta derlenemez; GitHub Actions her push'ta Windows ve Ubuntu üzerinde testleri çalıştırıp tüm paketleri üretir. `v1.2.3` gibi bir etiket push'lanınca dosyalar otomatik olarak Releases'e yüklenir.
+
+> Windows'ta proje çok uzun bir klasör yolundaysa (260+ karakter) NSIS kurulum dosyası derlenemez; projeyi `C:\dev\yh-launcher` gibi kısa bir yola taşı.
 
 ## Proje yapısı
 

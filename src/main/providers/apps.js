@@ -90,7 +90,9 @@ async function scanWindows() {
 function parseDesktopFile(text) {
   const out = {};
   let inEntry = false;
-  const lang = (process.env.LANG || '').split(/[._]/)[0];
+  // LANG=tr_TR.UTF-8 -> "tr_TR" ve "tr" anahtarlarını kabul et (tam eşleşme öncelikli)
+  const full = (process.env.LC_MESSAGES || process.env.LANG || '').split('.')[0];
+  const lang = full.split('_')[0];
   for (const line of text.split(/\r?\n/)) {
     if (line.startsWith('[')) {
       inEntry = line.trim() === '[Desktop Entry]';
@@ -101,9 +103,20 @@ function parseDesktopFile(text) {
     if (!m) continue;
     const [, key, , locale, value] = m;
     if (!locale) out[key] ??= value;
-    else if (locale === lang) out[`${key}:local`] = value;
+    else if (locale === full) out[`${key}:local`] = value;
+    else if (locale === lang) out[`${key}:local`] ??= value;
   }
   return out;
+}
+
+// OnlyShowIn / NotShowIn: ör. sadece KDE'de görünmesi gereken uygulamaları GNOME'da gizle
+function shownIn(entry) {
+  const desktops = (process.env.XDG_CURRENT_DESKTOP || '').split(':').filter(Boolean);
+  if (!desktops.length) return true;
+  const list = (v) => (v || '').split(';').filter(Boolean);
+  if (entry.OnlyShowIn && !list(entry.OnlyShowIn).some((d) => desktops.includes(d))) return false;
+  if (entry.NotShowIn && list(entry.NotShowIn).some((d) => desktops.includes(d))) return false;
+  return true;
 }
 
 async function scanLinux() {
@@ -132,11 +145,13 @@ async function scanLinux() {
       continue;
     }
     if (entry.Type !== 'Application' || entry.NoDisplay === 'true' || entry.Hidden === 'true' || !entry.Exec) continue;
+    if (!shownIn(entry)) continue;
     const title = entry['Name:local'] || entry.Name;
     if (!title) continue;
     const key = title.toLowerCase();
     if (apps.has(key)) continue;
-    const exec = entry.Exec.replace(/%[fFuUdDnNickvm]/g, '').replace(/\s+/g, ' ').trim();
+    // Alan kodlarını (%U, %f…) at, "%%" kaçışını tek % yap
+    const exec = entry.Exec.replace(/%[fFuUdDnNickvm]/g, '').replace(/%%/g, '%').replace(/\s+/g, ' ').trim();
     apps.set(key, {
       id: `app:${file}`,
       type: 'app',
@@ -145,7 +160,7 @@ async function scanLinux() {
       keywords: [entry['GenericName:local'], entry.GenericName, ...(entry.Keywords || '').split(';')].filter(Boolean),
       iconPath: entry.Icon || null,
       desktopFile: file,
-      action: { kind: 'linux-app', exec, terminal: entry.Terminal === 'true' },
+      action: { kind: 'linux-app', exec, terminal: entry.Terminal === 'true', cwd: entry.Path || null },
       uninstallable: true,
     });
   }

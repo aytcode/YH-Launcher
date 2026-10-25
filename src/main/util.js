@@ -22,18 +22,29 @@ function hasCommand(cmd) {
 let linuxTerminal;
 function findLinuxTerminal() {
   if (linuxTerminal !== undefined) return linuxTerminal;
+  // Masaüstüne uygun terminal önce; x-terminal-emulator bazı sistemlerde "-e"yi tek
+  // string olarak yorumladığı için sona yakın
   const candidates = [
-    ['x-terminal-emulator', '-e'],
+    ['ptyxis', '--'],
     ['gnome-terminal', '--'],
+    ['kgx', '--'],
     ['konsole', '-e'],
     ['xfce4-terminal', '-x'],
-    ['kitty', '--'],
-    ['alacritty', '-e'],
-    ['wezterm', 'start', '--'],
+    ['mate-terminal', '-x'],
+    ['lxterminal', '-e'],
     ['tilix', '-e'],
+    ['kitty'],
+    ['alacritty', '-e'],
+    ['foot'],
+    ['wezterm', 'start', '--'],
+    ['x-terminal-emulator', '-e'],
     ['xterm', '-e'],
   ];
-  linuxTerminal = candidates.find(([bin]) => hasCommand(bin)) || null;
+  const desktop = (process.env.XDG_CURRENT_DESKTOP || '').toUpperCase();
+  if (desktop.includes('KDE')) candidates.unshift(['konsole', '-e']);
+  if (desktop.includes('XFCE')) candidates.unshift(['xfce4-terminal', '-x']);
+  const preferred = process.env.TERMINAL && [process.env.TERMINAL, '-e'];
+  linuxTerminal = [preferred, ...candidates].find((c) => c && hasCommand(c[0])) || null;
   return linuxTerminal;
 }
 
