@@ -31,11 +31,41 @@ const ICON_PATHS = {
   external: '<path d="M15 3h6v6M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
 };
 
+// macOS Sistem Ayarları'ndaki gibi her sembolün kendi renkli karesi (üst → alt gradyan)
+const SYM_COLORS = {
+  gear: ['#9a9aa1', '#6c6c72'],
+  refresh: ['#3ddc6a', '#24a148'],
+  plugin: ['#c77dff', '#8e44d6'],
+  power: ['#ff5b52', '#d6312a'],
+  lock: ['#3a9bff', '#0a6cf0'],
+  moon: ['#7774ff', '#4844d9'],
+  logout: ['#ffb340', '#ef8a00'],
+  restart: ['#ffb340', '#ef8a00'],
+  trash: ['#9a9aa1', '#5d5d63'],
+  activity: ['#3ddc6a', '#24a148'],
+  terminal: ['#4a4a50', '#1f1f23'],
+  calc: ['#ffad33', '#f27a00'],
+  globe: ['#3a9bff', '#0a6cf0'],
+  search: ['#3a9bff', '#0a6cf0'],
+  folder: ['#5ac8fa', '#1e9bd7'],
+  file: ['#9a9aa1', '#6c6c72'],
+  bulb: ['#ffd43b', '#f2a900'],
+  'eye-off': ['#9a9aa1', '#6c6c72'],
+  logo: ['#2c3550', '#141826'],
+};
+
+// Renkli kare içinde beyaz sembol
+function symTile(name, size = 30) {
+  const [a, b] = SYM_COLORS[name] || SYM_COLORS.gear;
+  const inner = name === 'logo' ? `<img src="../../assets/logo.png" alt="" style="width:62%;height:62%">` : svgIcon(name, Math.round(size * 0.56));
+  return `<span class="sym-tile" style="--c1:${a};--c2:${b};width:${size}px;height:${size}px">${inner}</span>`;
+}
+
 function svgIcon(name, size = 18) {
   const body = ICON_PATHS[name] || ICON_PATHS.file;
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 }
 
 document.querySelectorAll('[data-icon]').forEach((el) => {
-  el.innerHTML = svgIcon(el.dataset.icon, el.classList.contains('search-icon') ? 22 : 16);
+  el.innerHTML = svgIcon(el.dataset.icon, el.classList.contains('search-icon') ? 21 : 15);
 });

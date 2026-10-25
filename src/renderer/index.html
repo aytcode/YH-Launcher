@@ -8,33 +8,38 @@
     />
     <title>YH Launcher</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="boot.js"></script>
   </head>
   <body>
     <div id="panel" class="panel">
-      <div class="searchbar">
+      <header class="searchbar">
         <span class="search-icon" data-icon="search"></span>
-        <input id="q" type="text" placeholder="Uygulama, dosya, site ya da komut ara…" spellcheck="false" autocomplete="off" />
+        <input id="q" type="text" placeholder="YH Launcher'da ara" spellcheck="false" autocomplete="off" />
         <span id="mode" class="mode-chip hidden"></span>
-      </div>
+      </header>
 
-      <div id="list" class="list" role="listbox"></div>
+      <main id="list" class="list" role="listbox">
+        <div id="list-inner" class="list-inner"></div>
+      </main>
 
       <div id="settings" class="settings hidden"></div>
 
-      <div class="footer">
-        <button id="btn-settings" class="footer-btn" title="Ayarlar (Ctrl+,)">
+      <footer class="footer">
+        <button id="btn-settings" class="footer-btn brand" title="Ayarlar (Ctrl+,)">
           <img src="../../assets/logo.png" alt="" class="footer-logo" />
-          <span>Ayarlar</span>
+          <span>YH Launcher</span>
         </button>
-        <span id="toast" class="toast"></span>
+        <span class="footer-spacer"></span>
+        <span id="primary-hint" class="footer-hint"><span id="primary-label">Aç</span><kbd>↵</kbd></span>
+        <span class="footer-divider"></span>
         <button id="btn-actions" class="footer-btn" title="Eylemler (Ctrl+K)">
-          <span data-icon="bolt"></span>
           <span>Eylemler</span>
-          <kbd>Ctrl K</kbd>
+          <kbd>Ctrl</kbd><kbd>K</kbd>
         </button>
-      </div>
+      </footer>
 
-      <div id="actions" class="actions hidden" role="menu"></div>
+      <div id="toast" class="toast" role="status"></div>
+      <div id="actions" class="actions" role="menu"></div>
     </div>
     <script src="icons.js"></script>
     <script src="settings.js"></script>

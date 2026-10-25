@@ -47,8 +47,9 @@ class Search {
     const max = this.store.get('maxResults');
     let items;
 
+    // Eklenti sonuç vermezse ("yh launcher" gibi) normal aramaya düş
     const pluginHit = await this.plugins.keywordSearch(q);
-    if (pluginHit) {
+    if (pluginHit?.length) {
       items = pluginHit;
     } else if (q.startsWith('>')) {
       items = [this.cmds.shellItem(q.slice(1).trim())];
@@ -85,10 +86,11 @@ class Search {
 
   async home() {
     const sections = [];
-    const pinned = this.store.get('pinned').map((p) => ({ ...p }));
-    if (pinned.length) sections.push({ title: 'Sabitlenenler', items: pinned });
+    // Güncel halini kullan (ikon, yol değişmiş olabilir); bulunamazsa kayıtlı kopya
+    const pinned = this.store.get('pinned').map((p) => this.lookup(p.id) || { ...p });
+    if (pinned.length) sections.push({ title: 'Sabitlenenler', layout: 'grid', items: pinned });
 
-    sections.push({ title: 'Sık kullanılan siteler', items: this.web.frequentSites(6) });
+    sections.push({ title: 'Sık kullanılan siteler', layout: 'grid', items: this.web.frequentSites(8) });
 
     const exclude = new Set([...pinned.map((p) => p.id), ...sections[sections.length - 1].items.map((s) => s.id)]);
     const hidden = new Set(this.store.get('hidden'));

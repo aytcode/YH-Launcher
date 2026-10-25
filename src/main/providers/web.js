@@ -12,8 +12,9 @@ function hostOf(url) {
   }
 }
 
+// 64 px favicon: büyük site karelerinde net görünsün
 function favicon(url) {
-  return `https://icons.duckduckgo.com/ip3/${hostOf(url)}.ico`;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostOf(url))}&sz=64`;
 }
 
 class Web {

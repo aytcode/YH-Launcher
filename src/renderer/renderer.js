@@ -1,29 +1,33 @@
 const $ = (s) => document.querySelector(s);
+const panelEl = $('#panel');
 const qEl = $('#q');
 const listEl = $('#list');
+const innerEl = $('#list-inner');
 const actionsEl = $('#actions');
 const toastEl = $('#toast');
 const modeEl = $('#mode');
+const primaryHintEl = $('#primary-hint');
+const primaryLabelEl = $('#primary-label');
 
-const state = { flat: [], sel: 0, token: 0, actions: null, actSel: 0, actItem: null, cfg: null };
-const TILE_COLORS = ['#4f8cff', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#06b6d4', '#eab308', '#ef4444'];
+const state = { flat: [], sel: 0, token: 0, actions: null, actSel: 0, actItem: null, cfg: null, view: null };
+let hlEl = null;
 
 // ---------------------------------------------------------------- yardımcılar
 
 function letterTile(title) {
   let h = 0;
   for (const ch of title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const color = TILE_COLORS[h % TILE_COLORS.length];
+  const hue = h % 360;
   const letter = esc((title.trim()[0] || '?').toLocaleUpperCase('tr'));
-  return `<span class="item-icon letter" style="background:${color}">${letter}</span>`;
+  return `<span class="letter" style="background:linear-gradient(180deg,hsl(${hue} 72% 62%),hsl(${hue} 68% 46%))">${letter}</span>`;
 }
 
-function iconHtml(item) {
+function iconHtml(item, size) {
   const icon = item.icon;
   if (!icon) return letterTile(item.title);
-  if (icon === 'sym:logo') return `<span class="item-icon sym"><img class="logo-img" src="../../assets/logo.png" alt=""></span>`;
-  if (icon.startsWith('sym:')) return `<span class="item-icon sym">${svgIcon(icon.slice(4))}</span>`;
-  return `<span class="item-icon"><img src="${esc(icon)}" alt="" data-fallback="${esc(item.title)}"></span>`;
+  if (icon.startsWith('sym:')) return symTile(icon.slice(4), size);
+  const favicon = item.type === 'site' || item.type === 'web' ? ' class="favicon"' : '';
+  return `<img${favicon} src="${esc(icon)}" alt="" data-fallback="${esc(item.title)}">`;
 }
 
 function highlight(title, q) {
@@ -47,12 +51,14 @@ function applyTheme(theme) {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 }
 
+const PRIMARY_LABEL = { copy: 'Kopyala', exec: 'Çalıştır', system: 'Çalıştır', internal: 'Çalıştır', setQuery: 'Tamamla', plugin: 'Seç' };
+
 // ---------------------------------------------------------------- liste
 
 let refreshTimer;
 function scheduleRefresh() {
   clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(refresh, 25);
+  refreshTimer = setTimeout(refresh, 20);
 }
 
 async function refresh(keepSelection = false) {
@@ -64,56 +70,147 @@ async function refresh(keepSelection = false) {
   render(res, q);
   if (prevId) {
     const i = state.flat.findIndex((it) => it.id === prevId);
-    if (i >= 0) select(i);
+    if (i >= 0) select(i, true);
   }
   updateMode(q);
 }
 
+function rowHtml(item, idx, q) {
+  return `
+    <div class="item" data-idx="${idx}" role="option">
+      <span class="icon">${iconHtml(item, 28)}</span>
+      <div class="text">
+        <div class="title">${highlight(item.title, q)}</div>
+        ${item.subtitle ? `<div class="sub">${esc(item.subtitle)}</div>` : ''}
+      </div>
+      <div class="meta">
+        ${item.pinned ? `<span class="pin" title="Sabitlendi">${svgIcon('pin', 13)}</span>` : ''}
+        <span>${esc(item.label || '')}</span>
+        <kbd class="enter">↵</kbd>
+      </div>
+    </div>`;
+}
+
+function tileHtml(item, idx) {
+  return `
+    <div class="item tile" data-idx="${idx}" role="option" aria-label="${esc(item.title)}">
+      <span class="tile-icon">${iconHtml(item, 52)}</span>
+      <span class="tile-label">${esc(item.title)}</span>
+    </div>`;
+}
+
 function render(res, q) {
   state.flat = [];
-  let html = '';
+  let html = '<div id="hl" class="highlight instant"></div>';
   for (const section of res.sections) {
     if (!section.items.length) continue;
     if (section.title) html += `<div class="section-title">${esc(section.title)}</div>`;
-    for (const item of section.items) {
+    const parts = section.items.map((item) => {
       const idx = state.flat.push(item) - 1;
-      html += `
-        <div class="item" data-idx="${idx}" role="option">
-          ${iconHtml(item)}
-          <div class="item-text">
-            <div class="item-title">${highlight(item.title, q)}</div>
-            ${item.subtitle ? `<div class="item-sub">${esc(item.subtitle)}</div>` : ''}
-          </div>
-          <div class="item-meta">
-            ${item.pinned ? `<span class="pin" title="Sabitlendi">${svgIcon('pin', 14)}</span>` : ''}
-            <span>${esc(item.label || '')}</span>
-          </div>
-        </div>`;
-    }
+      return section.layout === 'grid' ? tileHtml(item, idx) : rowHtml(item, idx, q);
+    });
+    html += section.layout === 'grid' ? `<div class="grid">${parts.join('')}</div>` : parts.join('');
   }
-  listEl.innerHTML = html || `<div class="empty">Sonuç yok</div>`;
-  listEl.querySelectorAll('img[data-fallback]').forEach((img) =>
+  if (!state.flat.length) {
+    html += `<div class="empty"><b>Sonuç yok</b><span>"${esc(q.trim())}" için bir şey bulunamadı</span></div>`;
+  }
+  innerEl.innerHTML = html;
+  hlEl = $('#hl');
+  innerEl.querySelectorAll('img[data-fallback]').forEach((img) =>
     img.addEventListener('error', () => {
-      img.parentElement.outerHTML = letterTile(img.dataset.fallback);
+      img.outerHTML = letterTile(img.dataset.fallback);
     })
   );
+
+  // Ana ekran <-> arama geçişinde yumuşak belirme; her tuşta değil
+  const view = q.trim() ? 'search' : 'home';
+  if (view !== state.view) {
+    innerEl.classList.remove('enter');
+    void innerEl.offsetWidth;
+    innerEl.classList.add('enter');
+    state.view = view;
+  }
   listEl.scrollTop = 0;
-  select(0);
+  select(0, true);
 }
 
-function select(i) {
-  if (!state.flat.length) return;
+function itemEl(i) {
+  return innerEl.querySelector(`.item[data-idx="${i}"]`);
+}
+
+function moveHighlight(el, instant) {
+  if (!hlEl) return;
+  if (!el) {
+    hlEl.style.opacity = '0';
+    return;
+  }
+  if (instant) hlEl.classList.add('instant');
+  hlEl.style.width = `${el.offsetWidth}px`;
+  hlEl.style.height = `${el.offsetHeight}px`;
+  hlEl.style.transform = `translate(${el.offsetLeft}px, ${el.offsetTop}px)`;
+  hlEl.style.borderRadius = el.classList.contains('tile') ? '14px' : '10px';
+  hlEl.style.opacity = '1';
+  if (instant) {
+    void hlEl.offsetWidth;
+    hlEl.classList.remove('instant');
+  }
+}
+
+function select(i, instant = false) {
+  if (!state.flat.length) {
+    moveHighlight(null);
+    updateFooter();
+    return;
+  }
   state.sel = Math.max(0, Math.min(i, state.flat.length - 1));
-  listEl.querySelectorAll('.item.selected').forEach((el) => el.classList.remove('selected'));
-  const el = listEl.querySelector(`.item[data-idx="${state.sel}"]`);
+  innerEl.querySelectorAll('.item.selected').forEach((el) => el.classList.remove('selected'));
+  const el = itemEl(state.sel);
   if (el) {
     el.classList.add('selected');
+    moveHighlight(el, instant);
     el.scrollIntoView({ block: 'nearest' });
   }
+  updateFooter();
+}
+
+// Izgara + liste karışık düzende ok tuşları: en yakın komşuya geometrik olarak git
+function neighbor(dir) {
+  const els = [...innerEl.querySelectorAll('.item')];
+  const cur = els[state.sel];
+  if (!cur) return -1;
+  const cx = cur.offsetLeft + cur.offsetWidth / 2;
+  const cy = cur.offsetTop + cur.offsetHeight / 2;
+  let best = -1;
+  let bestScore = Infinity;
+  els.forEach((el, i) => {
+    if (i === state.sel) return;
+    const dx = el.offsetLeft + el.offsetWidth / 2 - cx;
+    const dy = el.offsetTop + el.offsetHeight / 2 - cy;
+    let primary;
+    if (dir === 'down' && dy > 4) primary = dy;
+    else if (dir === 'up' && dy < -4) primary = -dy;
+    else if (dir === 'right' && Math.abs(dy) < 4 && dx > 0) primary = dx;
+    else if (dir === 'left' && Math.abs(dy) < 4 && dx < 0) primary = -dx;
+    else return;
+    const secondary = dir === 'up' || dir === 'down' ? Math.abs(dx) : 0;
+    const score = Math.round(primary / 8) * 100000 + secondary;
+    if (score < bestScore) {
+      bestScore = score;
+      best = i;
+    }
+  });
+  return best;
 }
 
 function current() {
   return state.flat[state.sel];
+}
+
+function updateFooter() {
+  const item = current();
+  const kind = item?.action?.kind;
+  primaryHintEl.style.visibility = item && kind !== 'noop' ? 'visible' : 'hidden';
+  primaryLabelEl.textContent = PRIMARY_LABEL[kind] || 'Aç';
 }
 
 function updateMode(q) {
@@ -125,7 +222,7 @@ function updateMode(q) {
     const eng = m && state.cfg?.engines.find((e) => e.key.toLowerCase() === m[1].toLowerCase());
     if (eng) label = eng.name;
   }
-  modeEl.textContent = label;
+  if (modeEl.textContent !== label) modeEl.textContent = label;
   modeEl.classList.toggle('hidden', !label);
 }
 
@@ -164,36 +261,47 @@ async function openActions() {
   state.actions = list;
   state.actItem = item;
   state.actSel = 0;
-  actionsEl.innerHTML =
-    `<div class="actions-title">${esc(item.title)}</div>` +
-    list
-      .map(
-        (a, i) => `
+  let html = `<div class="actions-title">${esc(item.title)}</div>`;
+  let sepDone = false;
+  list.forEach((a, i) => {
+    if (a.danger && !sepDone) {
+      html += '<div class="action-sep"></div>';
+      sepDone = true;
+    }
+    html += `
       <div class="action${a.danger ? ' danger' : ''}" data-act="${i}">
-        <span class="action-icon">${svgIcon(a.icon.replace('sym:', ''), 16)}</span>
+        <span class="action-icon">${svgIcon(a.icon.replace('sym:', ''), 15)}</span>
         <span>${esc(a.title)}</span>
         ${a.shortcut ? `<kbd>${esc(a.shortcut)}</kbd>` : ''}
-      </div>`
-      )
-      .join('');
+      </div>`;
+  });
+  actionsEl.innerHTML = html;
   actionsEl.classList.remove('hidden');
+  void actionsEl.offsetWidth;
+  actionsEl.classList.add('open');
   selectAction(0);
 }
 
 function selectAction(i) {
   const n = state.actions.length;
   state.actSel = (i + n) % n;
-  actionsEl.querySelectorAll('.action').forEach((el, j) => el.classList.toggle('selected', j === state.actSel));
+  actionsEl.querySelectorAll('.action').forEach((el) => el.classList.toggle('selected', +el.dataset.act === state.actSel));
 }
 
 function closeActions() {
   state.actions = null;
-  actionsEl.classList.add('hidden');
+  actionsEl.classList.remove('open');
 }
 
 actionsEl.addEventListener('click', (e) => {
   const el = e.target.closest('.action');
-  if (el) runAction(state.actions[+el.dataset.act].id, state.actItem);
+  if (el && state.actions) runAction(state.actions[+el.dataset.act].id, state.actItem);
+});
+
+actionsEl.addEventListener('mousemove', (e) => {
+  if (e.movementX === 0 && e.movementY === 0) return;
+  const el = e.target.closest('.action');
+  if (el && state.actions && +el.dataset.act !== state.actSel) selectAction(+el.dataset.act);
 });
 
 // ---------------------------------------------------------------- klavye / fare
@@ -221,10 +329,19 @@ document.addEventListener('keydown', (e) => {
 
   const item = current();
   const key = e.key.toLowerCase();
-  if (ctrl && e.key === 'ArrowUp' && item?.pinned) runAction('pin-up');
-  else if (ctrl && e.key === 'ArrowDown' && item?.pinned) runAction('pin-down');
-  else if (e.key === 'ArrowDown') select(state.sel + 1);
-  else if (e.key === 'ArrowUp') select(state.sel - 1);
+  const onTile = itemEl(state.sel)?.classList.contains('tile');
+  const go = (dir) => {
+    const n = neighbor(dir);
+    if (n >= 0) select(n);
+  };
+
+  // Sabitlenenleri yeniden sırala: listede Ctrl+↑/↓, kare ızgarada Ctrl+←/→ da olur
+  if (ctrl && item?.pinned && (e.key === 'ArrowUp' || (onTile && e.key === 'ArrowLeft'))) runAction('pin-up');
+  else if (ctrl && item?.pinned && (e.key === 'ArrowDown' || (onTile && e.key === 'ArrowRight'))) runAction('pin-down');
+  else if (e.key === 'ArrowDown') go('down');
+  else if (e.key === 'ArrowUp') go('up');
+  else if (e.key === 'ArrowRight' && onTile) go('right');
+  else if (e.key === 'ArrowLeft' && onTile) go('left');
   else if (e.key === 'PageDown') select(state.sel + 6);
   else if (e.key === 'PageUp') select(state.sel - 6);
   else if (e.key === 'Enter') runSelected({ shift: e.shiftKey, ctrl, alt: e.altKey });
@@ -253,11 +370,10 @@ document.addEventListener('keydown', (e) => {
 
 qEl.addEventListener('input', scheduleRefresh);
 
-let lastMouse = '';
 listEl.addEventListener('mousemove', (e) => {
-  const pos = `${e.screenX},${e.screenY}`;
-  if (pos === lastMouse) return; // kaydırma sırasında seçimi değiştirme
-  lastMouse = pos;
+  // Liste yenilenince / kayınca Chromium imleç oynamadan sahte mousemove üretir;
+  // sadece gerçek fare hareketi seçimi değiştirsin
+  if (e.movementX === 0 && e.movementY === 0) return;
   const el = e.target.closest('.item');
   if (el && +el.dataset.idx !== state.sel) select(+el.dataset.idx);
 });
@@ -283,10 +399,12 @@ document.addEventListener('mousedown', (e) => {
 
 $('#btn-actions').addEventListener('click', () => (state.actions ? closeActions() : openActions()));
 $('#btn-settings').addEventListener('click', () => (Settings.isOpen ? Settings.close() : Settings.open()));
+primaryHintEl.addEventListener('click', () => runSelected());
 
 // ---------------------------------------------------------------- pencere olayları
 
 yh.on('shown', (view) => {
+  panelEl.classList.add('visible');
   if (view === 'settings') Settings.open();
   else {
     if (Settings.isOpen) Settings.close();
@@ -297,12 +415,19 @@ yh.on('shown', (view) => {
 });
 
 yh.on('hidden', () => {
+  panelEl.classList.remove('visible');
   closeActions();
   if (Settings.isOpen) Settings.close(false);
   qEl.value = '';
+  state.view = null;
 });
 
-yh.on('theme', applyTheme);
+// Ayar önce güncellenmeli: tema değişince prefers-color-scheme de değişir ve
+// aşağıdaki dinleyici eski değeri uygulamasın
+yh.on('theme', (theme) => {
+  if (state.cfg) state.cfg.theme = theme;
+  applyTheme(theme);
+});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(state.cfg?.theme));
 
 (async () => {

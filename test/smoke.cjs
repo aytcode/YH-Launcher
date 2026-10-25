@@ -47,7 +47,7 @@ app.whenReady().then(async () => {
     await wait(1000);
     await snap(win, name);
     const rows = await wc.executeJavaScript(
-      `[...document.querySelectorAll('.item')].map(e=>({title:e.querySelector('.item-title').textContent,label:e.querySelector('.item-meta').textContent.trim()}))`
+      `[...document.querySelectorAll('.item')].map(e=>({title:(e.querySelector('.title')||e.querySelector('.tile-label')).textContent,label:(e.querySelector('.meta > span:not(.pin)')?.textContent||'').trim()}))`
     );
     console.log(`--- ${name} "${q}": ${rows.slice(0, 5).map((r) => `${r.title} [${r.label}]`).join(' | ')}`);
     return rows;

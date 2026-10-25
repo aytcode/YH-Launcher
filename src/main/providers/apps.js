@@ -50,6 +50,14 @@ async function scanWindows() {
       } catch {
         // bazı kısayollar (MSI reklam kısayolları) okunamaz
       }
+    } else if (file.toLowerCase().endsWith('.url')) {
+      // Steam/Epic oyun kısayolları: ikon yolu dosyanın içinde (IconFile=...)
+      try {
+        const icon = (await fs.promises.readFile(file, 'utf8')).match(/^IconFile=(.+)$/im)?.[1]?.trim();
+        if (icon && /\.(exe|ico)$/i.test(icon) && fs.existsSync(icon)) iconPath = icon;
+      } catch {
+        // okunamadı, genel simge kalsın
+      }
     }
     apps.set(key, {
       id: `app:${file.toLowerCase()}`,
@@ -84,7 +92,61 @@ async function scanWindows() {
   } catch (e) {
     console.warn('Get-StartApps okunamadı:', e.message);
   }
+  await attachStoreLogos([...apps.values()].filter((a) => a.appId));
   return [...apps.values()];
+}
+
+// Store uygulamalarının logosu paket manifestinde; dosya adında ölçek ekleri olur
+// (Square44x44Logo.targetsize-48_altform-unplated.png gibi). En uygun varyantı seç.
+async function attachStoreLogos(list) {
+  if (!list.length) return;
+  const families = [...new Set(list.map((a) => a.appId.split('!')[0]))];
+  const script = `
+$want = @(${families.map((f) => `'${f.replace(/'/g, "''")}'`).join(',')})
+Get-AppxPackage | Where-Object { $want -contains $_.PackageFamilyName } | ForEach-Object {
+  $m = Join-Path $_.InstallLocation 'AppxManifest.xml'
+  if (Test-Path $m) {
+    [xml]$x = Get-Content -Raw $m
+    foreach ($a in @($x.Package.Applications.Application)) {
+      $v = $a.VisualElements
+      $logo = $v.Square44x44Logo; if (-not $logo) { $logo = $x.Package.Properties.Logo }
+      [pscustomobject]@{ Id = $_.PackageFamilyName + '!' + $a.Id; Dir = $_.InstallLocation; Logo = $logo }
+    }
+  }
+} | ConvertTo-Json -Compress`;
+  let rows;
+  try {
+    rows = JSON.parse((await powershell(script, 30000)) || '[]');
+  } catch (e) {
+    console.warn('Store logoları okunamadı:', e.message);
+    return;
+  }
+  const byId = new Map((Array.isArray(rows) ? rows : [rows]).filter((r) => r?.Logo).map((r) => [r.Id, r]));
+  for (const app of list) {
+    const r = byId.get(app.appId);
+    const file = r && findLogoVariant(path.join(r.Dir, r.Logo));
+    if (file) app.iconPath = file;
+  }
+}
+
+const LOGO_PREFERENCE = [/targetsize-48_altform-unplated/i, /targetsize-64_altform-unplated/i, /targetsize-32_altform-unplated/i, /altform-unplated/i, /targetsize-48/i, /scale-200/i, /scale-150/i, /scale-100/i];
+
+function findLogoVariant(logoPath) {
+  if (fs.existsSync(logoPath)) return logoPath;
+  const dir = path.dirname(logoPath);
+  const base = path.basename(logoPath, path.extname(logoPath)).toLowerCase();
+  let files;
+  try {
+    files = fs.readdirSync(dir).filter((f) => f.toLowerCase().startsWith(`${base}.`) && f.toLowerCase().endsWith('.png'));
+  } catch {
+    return null;
+  }
+  for (const re of LOGO_PREFERENCE) {
+    const hit = files.find((f) => re.test(f) && !/contrast-/i.test(f));
+    if (hit) return path.join(dir, hit);
+  }
+  const any = files.find((f) => !/contrast-/i.test(f));
+  return any ? path.join(dir, any) : null;
 }
 
 function parseDesktopFile(text) {

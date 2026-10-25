@@ -26,6 +26,7 @@ const Settings = (() => {
       api.isOpen = true;
       document.getElementById('list').classList.add('hidden');
       document.querySelector('.searchbar').classList.add('hidden');
+      document.getElementById('panel').classList.add('in-settings');
       el.classList.remove('hidden');
       render();
     },
@@ -33,6 +34,7 @@ const Settings = (() => {
       api.isOpen = false;
       api.capturing = false;
       el.classList.add('hidden');
+      document.getElementById('panel').classList.remove('in-settings');
       document.getElementById('list').classList.remove('hidden');
       document.querySelector('.searchbar').classList.remove('hidden');
       if (focus) {
@@ -59,35 +61,44 @@ const Settings = (() => {
   const row = (title, desc, control) => `<div class="row"><div class="row-text"><b>${title}</b>${desc ? `<small>${desc}</small>` : ''}</div>${control}</div>`;
   const favicon = (url) => {
     try {
-      return `https://icons.duckduckgo.com/ip3/${new URL(url).hostname.replace(/^www\./, '')}.ico`;
+      return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(new URL(url).hostname.replace(/^www\./, ''))}&sz=64`;
     } catch {
       return '';
     }
   };
-  const del = (attr, i) => `<button class="btn icon-only" data-${attr}="${i}" title="Sil">${svgIcon('x', 14)}</button>`;
+  const del = (attr, i) => `<button class="btn icon-only" data-${attr}="${i}" title="Sil">${svgIcon('x', 13)}</button>`;
+  const group = (rows, title) => `${title ? `<div class="group-title">${title}</div>` : ''}<div class="group">${rows}</div>`;
+  const listOr = (items, empty) => `<div class="list-edit">${items || `<div class="empty-line">${empty}</div>`}</div>`;
+  const entryIcon = (name) => symTile(name, 26);
 
   const views = {
     general() {
       const engines = cfg.engines.map((e) => `<option value="${esc(e.key)}" ${e.key === cfg.defaultEngine ? 'selected' : ''}>${esc(e.name)}</option>`).join('');
-      const roots = cfg.extraFileRoots.map((r, i) => `<div class="entry"><span class="action-icon">${svgIcon('folder', 16)}</span><div class="entry-text"><b>${esc(r)}</b></div>${del('del-root', i)}</div>`).join('');
+      const roots = cfg.extraFileRoots.map((r, i) => `<div class="entry">${entryIcon('folder')}<div class="entry-text"><b>${esc(r)}</b></div>${del('del-root', i)}</div>`).join('');
       return `
         <h2>Genel</h2>
-        ${row('Açma kısayolu', 'Tıkla ve yeni tuş kombinasyonuna bas', `<input class="field hotkey-field" id="hotkey" readonly value="${esc(cfg.hotkey)}">`)}
-        ${error ? `<div class="error-text">${esc(error)}</div>` : ''}
-        ${row('Bilgisayar açılınca başlat', 'Arka planda sessizce çalışır', sw('launchAtStartup', cfg.launchAtStartup))}
-        ${row('Tema', '', `<select class="field" data-key="theme">
+        ${group(
+          row('Açma kısayolu', 'Tıkla ve yeni tuş kombinasyonuna bas', `<input class="field hotkey-field" id="hotkey" readonly value="${esc(cfg.hotkey)}">`) +
+            (error ? `<div class="error-text">${esc(error)}</div>` : '') +
+            row('Bilgisayar açılınca başlat', 'Arka planda sessizce çalışır', sw('launchAtStartup', cfg.launchAtStartup))
+        )}
+        ${group(
+          row('Görünüm', '', `<select class="field" data-key="theme">
             <option value="dark" ${cfg.theme === 'dark' ? 'selected' : ''}>Koyu</option>
             <option value="light" ${cfg.theme === 'light' ? 'selected' : ''}>Açık</option>
-            <option value="system" ${cfg.theme === 'system' ? 'selected' : ''}>Sistem</option></select>`)}
-        ${row('Gösterilecek sonuç sayısı', '', `<select class="field" data-key="maxResults" data-number>${[6, 8, 9, 10, 12, 15, 20].map((n) => `<option ${n === cfg.maxResults ? 'selected' : ''}>${n}</option>`).join('')}</select>`)}
-        ${row('Varsayılan arama motoru', 'Hiçbir şey bulunamazsa en altta çıkan arama', `<select class="field" data-key="defaultEngine">${engines}</select>`)}
-        ${row('Sık ziyaret edilen siteleri öğren', 'Yazarak 3 kez açtığın siteler otomatik olarak Siteler listesine eklenir', sw('autoLearnSites', cfg.autoLearnSites))}
-        ${row('Dosya araması', 'Ana klasörünü (5 seviye derinliğe kadar) indeksler', sw('fileSearch', cfg.fileSearch))}
-        <div class="hint">Ek arama klasörleri (ör. D:\\Projeler):</div>
-        <div class="list-edit">${roots}</div>
-        <button class="btn" id="add-root">${svgIcon('plus', 14)} Klasör ekle</button>
-        <div style="height:16px"></div>
-        ${row('Kullanım geçmişi', 'Sık kullanılanlar sıralaması bu geçmişe göre yapılır', `<button class="btn" id="clear-usage">Temizle</button>`)}`;
+            <option value="system" ${cfg.theme === 'system' ? 'selected' : ''}>Sistem</option></select>`) +
+            row('Gösterilecek sonuç sayısı', '', `<select class="field" data-key="maxResults" data-number>${[6, 8, 9, 10, 12, 15, 20].map((n) => `<option ${n === cfg.maxResults ? 'selected' : ''}>${n}</option>`).join('')}</select>`) +
+            row('Varsayılan arama motoru', 'Hiçbir şey bulunamazsa en altta çıkar', `<select class="field" data-key="defaultEngine">${engines}</select>`),
+          'Arama'
+        )}
+        ${group(
+          row('Sık ziyaret edilen siteleri öğren', 'Yazarak 3 kez açtığın siteler Siteler listesine eklenir', sw('autoLearnSites', cfg.autoLearnSites)) +
+            row('Dosya araması', 'Ana klasörünü 5 seviye derinliğe kadar indeksler', sw('fileSearch', cfg.fileSearch)) +
+            roots.replace(/class="entry"/g, 'class="entry row"') +
+            `<div class="row"><div class="row-text"><small>Ek arama klasörleri (ör. D:\\Projeler)</small></div><button class="btn" id="add-root">${svgIcon('plus', 13)} Klasör ekle</button></div>`,
+          'Akıllı özellikler'
+        )}
+        ${group(row('Kullanım geçmişi', 'Sık kullanılanlar sıralaması bu geçmişe göre yapılır', `<button class="btn" id="clear-usage">Temizle</button>`), 'Gizlilik')}`;
     },
 
     sites() {
@@ -97,13 +108,14 @@ const Settings = (() => {
         )
         .join('');
       return `
-        <h2>Sık kullanılan siteler</h2>
-        <p class="hint">Ana ekranda en çok açtıkların üstte görünür. Adını yazarak da açabilirsin.</p>
-        <div class="list-edit">${items || '<div class="hint">Henüz site yok.</div>'}</div>
-        <div class="add-form">
+        <h2>Siteler</h2>
+        <p class="hint">Ana ekranda en çok açtıkların öne çıkar. Adını yazarak da açabilirsin.</p>
+        ${listOr(items, 'Henüz site yok.')}
+        <div class="group-title">Site ekle</div>
+        <div class="group add-form">
           <input class="field" id="site-name" placeholder="Ad (ör. Jira)">
           <input class="field" id="site-url" placeholder="https://…">
-          <button class="btn primary" id="add-site">${svgIcon('plus', 14)} Ekle</button>
+          <button class="btn primary" id="add-site">Ekle</button>
         </div>`;
     },
 
@@ -114,31 +126,34 @@ const Settings = (() => {
       return `
         <h2>Arama kısayolları</h2>
         <p class="hint">Kısayolu yazıp boşluk bırak: <code>yt lofi</code>, <code>gh electron</code>, <code>npm react</code>. Adreste aranacak yeri <code>%s</code> ile belirt.</p>
-        <div class="list-edit">${items}</div>
-        <div class="add-form">
+        ${listOr(items, 'Kısayol yok.')}
+        <div class="group-title">Kısayol ekle</div>
+        <div class="group add-form">
           <input class="field" id="eng-key" placeholder="Kısayol (ör. az)" style="flex:0 0 120px">
           <input class="field" id="eng-name" placeholder="Ad (ör. Amazon)">
           <input class="field" id="eng-url" placeholder="https://site.com/search?q=%s" style="flex-basis:100%">
-          <button class="btn primary" id="add-engine">${svgIcon('plus', 14)} Ekle</button>
+          <button class="btn primary" id="add-engine">Ekle</button>
         </div>`;
     },
 
     commands() {
       const items = cfg.commands
         .map(
-          (c, i) => `<div class="entry"><span class="action-icon">${svgIcon('terminal', 16)}</span><div class="entry-text"><b>${esc(c.name)}</b><small>${esc(c.command)}</small></div>${c.terminal ? '<span class="badge">terminal</span>' : ''}${del('del-cmd', i)}</div>`
+          (c, i) => `<div class="entry">${entryIcon('terminal')}<div class="entry-text"><b>${esc(c.name)}</b><small>${esc(c.command)}</small></div>${c.terminal ? '<span class="badge">terminal</span>' : ''}${del('del-cmd', i)}</div>`
         )
         .join('');
       const ex = cfg.platform === 'win32' ? 'code C:\\Projeler\\site' : 'code ~/projeler/site';
       return `
         <h2>Özel komutlar</h2>
-        <p class="hint">Sık çalıştırdığın komutları isimle kaydet; launcher'da adını yazıp Enter'a bas. Örn. <code>${esc(ex)}</code>. Tek seferlik komutlar için <code>&gt; komut</code> yazman yeterli.</p>
-        <div class="list-edit">${items || '<div class="hint">Henüz komut yok.</div>'}</div>
-        <div class="add-form">
+        <p class="hint">Sık çalıştırdığın komutları isimle kaydet, adını yazıp Enter'a bas. Örn. <code>${esc(ex)}</code>. Tek seferlik komut için <code>&gt; komut</code> yeter.</p>
+        ${listOr(items, 'Henüz komut yok.')}
+        <div class="group-title">Komut ekle</div>
+        <div class="group add-form">
           <input class="field" id="cmd-name" placeholder="Ad (ör. Site projesini aç)">
           <input class="field" id="cmd-cmd" placeholder="Komut" style="flex-basis:100%">
-          <label class="row-text" style="display:flex;align-items:center;gap:8px">${sw('cmd-terminal', false).replace('data-key="cmd-terminal"', 'id="cmd-terminal"')} Terminalde göster</label>
-          <button class="btn primary" id="add-cmd">${svgIcon('plus', 14)} Ekle</button>
+          <label class="inline-check">${sw('cmd-terminal', false).replace('data-key="cmd-terminal"', 'id="cmd-terminal"')} Terminalde göster</label>
+          <span style="flex:1"></span>
+          <button class="btn primary" id="add-cmd">Ekle</button>
         </div>`;
     },
 
@@ -146,21 +161,20 @@ const Settings = (() => {
       const list = await yh.plugins();
       const items = list
         .map(
-          (p) => `<div class="entry"><span class="action-icon">${svgIcon('plugin', 16)}</span>
-            <div class="entry-text"><b>${esc(p.name)} <small style="display:inline">${esc(p.version)}</small></b>
-            <small>${p.error ? `<span class="error-text">Hata: ${esc(p.error)}</span>` : esc(p.description)}</small></div>
+          (p) => `<div class="entry">${entryIcon('plugin')}
+            <div class="entry-text"><b>${esc(p.name)} <span style="color:var(--text-3);font-weight:400">${esc(p.version)}</span></b>
+            <small>${p.error ? `<span style="color:var(--danger)">Hata: ${esc(p.error)}</span>` : esc(p.description)}</small></div>
             ${p.keyword ? `<span class="badge">${esc(p.keyword)}</span>` : ''}
-            ${p.builtin ? '<span class="badge">yerleşik</span>' : ''}
             <label class="switch"><input type="checkbox" data-plugin="${esc(p.id)}" ${p.enabled ? 'checked' : ''}><span></span></label></div>`
         )
         .join('');
       return `
         <h2>Eklentiler</h2>
-        <p class="hint">Topluluğun yazdığı eklentileri eklenti klasörüne kopyala ve "Yeniden yükle"ye bas. Her eklenti bir klasör: <code>plugin.json</code> + <code>index.js</code>. Eklentiler bilgisayarında tam yetkiyle çalışır; sadece güvendiğin kaynaklardan kur. Yeni eklentileri <b>discord.gg/yazilimhub</b>'da paylaş.</p>
-        <div class="list-edit">${items}</div>
-        <div class="add-form">
-          <button class="btn" id="plugins-folder">${svgIcon('folder', 14)} Eklenti klasörünü aç</button>
-          <button class="btn" id="plugins-reload">${svgIcon('refresh', 14)} Yeniden yükle</button>
+        <p class="hint">Topluluk eklentilerini eklenti klasörüne kopyala ve yeniden yükle. Eklentiler tam yetkiyle çalışır; sadece güvendiğin kaynaklardan kur. Kendi eklentini <b>discord.gg/yazilimhub</b>'da paylaş.</p>
+        ${listOr(items, 'Eklenti yok.')}
+        <div class="add-form" style="padding:0">
+          <button class="btn" id="plugins-folder">${svgIcon('folder', 13)} Eklenti klasörünü aç</button>
+          <button class="btn" id="plugins-reload">${svgIcon('refresh', 13)} Yeniden yükle</button>
         </div>`;
     },
 
@@ -170,25 +184,25 @@ const Settings = (() => {
         return rest.split(/[\\/]/).pop().replace(/\.(lnk|desktop|url)$/i, '') || rest;
       };
       const items = cfg.hidden
-        .map((id, i) => `<div class="entry"><span class="action-icon">${svgIcon('eye-off', 16)}</span><div class="entry-text"><b>${esc(pretty(id))}</b><small>${esc(id)}</small></div><button class="btn" data-unhide="${i}">Göster</button></div>`)
+        .map((id, i) => `<div class="entry">${entryIcon('eye-off')}<div class="entry-text"><b>${esc(pretty(id))}</b><small>${esc(id)}</small></div><button class="btn" data-unhide="${i}">Göster</button></div>`)
         .join('');
       return `
         <h2>Gizlenenler</h2>
         <p class="hint">Sonuçlarda görmek istemediğin öğeler (Ctrl+H ile gizlenir).</p>
-        <div class="list-edit">${items || '<div class="hint">Gizlenen öğe yok.</div>'}</div>`;
+        ${listOr(items, 'Gizlenen öğe yok.')}`;
     },
 
     about() {
       return `
         <div class="about">
-          <img src="../../assets/logo.png" alt="YazılımHub">
+          ${symTile('logo', 88)}
           <h3>YH Launcher</h3>
-          <small style="color:var(--text-faint)">Sürüm ${esc(cfg.version)}</small>
+          <span class="version">Sürüm ${esc(cfg.version)}</span>
           <p>YazılımHub topluluğunun geliştirdiği, eklentilerle genişleyen Windows ve Linux uygulama başlatıcısı.</p>
-          <button class="btn primary" id="open-discord">${svgIcon('external', 14)} discord.gg/yazilimhub</button>
+          <button class="btn primary" id="open-discord">${svgIcon('external', 13)} discord.gg/yazilimhub</button>
         </div>
-        <h2>Klavye kısayolları</h2>
-        ${[
+        <div class="group-title">Klavye kısayolları</div>
+        <div class="group">${[
           ['Enter', 'Aç / çalıştır'],
           ['Shift+Enter', 'Yönetici olarak çalıştır (Windows)'],
           ['Ctrl+Enter', 'Dosya konumunu aç'],
@@ -203,12 +217,14 @@ const Settings = (() => {
           ['Esc', 'Temizle / kapat'],
         ]
           .map(([k, d]) => row(d, '', `<kbd>${k}</kbd>`))
-          .join('')}`;
+          .join('')}</div>`;
     },
   };
 
   async function render() {
-    const nav = TABS.map(([id, label, icon]) => `<button data-tab="${id}" class="${id === tab ? 'active' : ''}">${svgIcon(icon, 16)} ${label}</button>`).join('');
+    const nav =
+      `<div class="nav-head">${symTile('logo', 26)} Ayarlar</div>` +
+      TABS.map(([id, label, icon]) => `<button data-tab="${id}" class="${id === tab ? 'active' : ''}">${symTile(icon, 22)} ${label}</button>`).join('');
     const body = await views[tab]();
     el.innerHTML = `<nav class="settings-nav">${nav}</nav><div class="settings-body">${body}</div>`;
     el.querySelectorAll('img').forEach((img) => img.addEventListener('error', () => (img.style.visibility = 'hidden')));

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, shell, clipboard, nativeImage, dialog, Notification } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Tray, Menu, screen, shell, clipboard, nativeImage, nativeTheme, dialog, Notification } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -29,12 +29,17 @@ let modalOpen = false; // onay penceresi açıkken bulanıklaşınca gizlenmesin
 
 // ---------------------------------------------------------------- pencere
 
+// Windows 11 22H2+ (build 22621): pencerenin arkasında sistemin buzlu cam (acrylic) malzemesi.
+// Diğer sistemlerde şeffaf pencere + CSS ile çizilen panel.
+const useMaterial = isWin && Number(os.release().split('.')[2]) >= 22621;
+
 function createWindow() {
   win = new BrowserWindow({
-    width: 780,
-    height: 540,
+    width: useMaterial ? 760 : 784,
+    height: useMaterial ? 500 : 524,
     frame: false,
-    transparent: true,
+    transparent: !useMaterial,
+    ...(useMaterial ? { backgroundMaterial: 'acrylic', roundedCorners: true } : {}),
     resizable: false,
     show: false,
     skipTaskbar: true,
@@ -51,7 +56,7 @@ function createWindow() {
       sandbox: true,
     },
   });
-  win.loadFile(path.join(__dirname, '../renderer/index.html'));
+  win.loadFile(path.join(__dirname, '../renderer/index.html'), { query: { material: useMaterial ? '1' : '0' } });
   win.on('blur', () => {
     if (!modalOpen && !win.webContents.isDevToolsOpened()) hide();
   });
@@ -399,7 +404,10 @@ function setupIpc() {
     for (const k of Object.keys(patch)) if (allowed.includes(k)) store.data[k] = patch[k];
     store.save();
     if ('fileSearch' in patch || 'extraFileRoots' in patch) search.files.refresh();
-    if ('theme' in patch) win.webContents.send('theme', patch.theme);
+    if ('theme' in patch) {
+      win.webContents.send('theme', patch.theme);
+      nativeTheme.themeSource = patch.theme; // cam malzemenin tonu da temaya uysun
+    }
     return result;
   });
   ipcMain.handle('plugins:list', () => search.plugins.list());
@@ -450,6 +458,7 @@ app.on('second-instance', (_e, argv) => (argv.includes('--toggle') ? toggle() : 
 app.whenReady().then(async () => {
   if (isWin) app.setAppUserModelId('com.yazilimhub.launcher');
   store = new Store();
+  nativeTheme.themeSource = store.get('theme');
   search = new Search(store, {
     openUrl,
     copy: (t) => clipboard.writeText(String(t)),
