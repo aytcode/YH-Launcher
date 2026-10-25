@@ -1,0 +1,50 @@
+{
+  "name": "yh-launcher",
+  "productName": "YH Launcher",
+  "version": "1.0.0",
+  "description": "YazılımHub topluluğunun Windows ve Linux için eklentilerle genişleyen uygulama başlatıcısı.",
+  "main": "src/main/main.js",
+  "author": "YazılımHub (discord.gg/yazilimhub)",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.yazilimhub.launcher",
+    "productName": "YH Launcher",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "plugins/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "YH Launcher"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility",
+      "maintainer": "YazılımHub"
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0"
+  }
+}

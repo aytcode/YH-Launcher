@@ -1,0 +1,9 @@
+{
+  "id": "dev-tools",
+  "name": "Geliştirici Araçları",
+  "description": "uuid, base64, url, hash, json, zaman damgası, renk dönüştürme",
+  "version": "1.0.0",
+  "author": "YazılımHub",
+  "keyword": "dev",
+  "main": "index.js"
+}

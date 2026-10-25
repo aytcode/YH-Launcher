@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="tr" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>YH Launcher</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="panel" class="panel">
+      <div class="searchbar">
+        <span class="search-icon" data-icon="search"></span>
+        <input id="q" type="text" placeholder="Uygulama, dosya, site ya da komut ara…" spellcheck="false" autocomplete="off" />
+        <span id="mode" class="mode-chip hidden"></span>
+      </div>
+
+      <div id="list" class="list" role="listbox"></div>
+
+      <div id="settings" class="settings hidden"></div>
+
+      <div class="footer">
+        <button id="btn-settings" class="footer-btn" title="Ayarlar (Ctrl+,)">
+          <img src="../../assets/logo.png" alt="" class="footer-logo" />
+          <span>Ayarlar</span>
+        </button>
+        <span id="toast" class="toast"></span>
+        <button id="btn-actions" class="footer-btn" title="Eylemler (Ctrl+K)">
+          <span data-icon="bolt"></span>
+          <span>Eylemler</span>
+          <kbd>Ctrl K</kbd>
+        </button>
+      </div>
+
+      <div id="actions" class="actions hidden" role="menu"></div>
+    </div>
+    <script src="icons.js"></script>
+    <script src="settings.js"></script>
+    <script src="renderer.js"></script>
+  </body>
+</html>

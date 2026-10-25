@@ -1,0 +1,9 @@
+{
+  "id": "yazilimhub",
+  "name": "YazılımHub",
+  "description": "Topluluk bağlantıları ve kısa notlar",
+  "version": "1.0.0",
+  "author": "YazılımHub",
+  "keyword": "yh",
+  "main": "index.js"
+}
