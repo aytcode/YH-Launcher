@@ -28,6 +28,7 @@ const ICON_PATHS = {
   down: '<path d="m6 9 6 6 6-6"/>',
   bulb: '<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-7.8-9-7.8z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/>',
   external: '<path d="M15 3h6v6M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
 };
 
@@ -52,6 +53,7 @@ const SYM_COLORS = {
   bulb: ['#ffd43b', '#f2a900'],
   'eye-off': ['#9a9aa1', '#6c6c72'],
   logo: ['#2c3550', '#141826'],
+  palette: ['#ff7a59', '#e0457b'],
 };
 
 // Renkli kare içinde beyaz sembol

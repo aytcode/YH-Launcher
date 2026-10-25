@@ -6,6 +6,10 @@ const DEFAULTS = {
   hotkey: 'Alt+Space',
   launchAtStartup: false,
   theme: 'dark', // dark | light | system
+  accent: 'blue', // blue | purple | pink | red | orange | yellow | green | indigo | graphite
+  selection: 'neutral', // neutral | accent
+  glass: 'balanced', // clear | balanced | frosted
+  density: 'normal', // compact | normal | comfortable
   maxResults: 9,
   fileSearch: true,
   extraFileRoots: [],

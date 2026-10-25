@@ -2,10 +2,33 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
+// Apple sistem renkleri (koyu varyant, renk noktalarında gösterilir)
+const ACCENTS = [
+  { id: 'blue', name: 'Mavi', color: '#0a84ff' },
+  { id: 'purple', name: 'Mor', color: '#bf5af2' },
+  { id: 'pink', name: 'Pembe', color: '#ff375f' },
+  { id: 'red', name: 'Kırmızı', color: '#ff453a' },
+  { id: 'orange', name: 'Turuncu', color: '#ff9f0a' },
+  { id: 'yellow', name: 'Sarı', color: '#ffd60a' },
+  { id: 'green', name: 'Yeşil', color: '#30d158' },
+  { id: 'indigo', name: 'Çivit', color: '#5e5ce6' },
+  { id: 'graphite', name: 'Grafit', color: '#8e8e93' },
+];
+
+// Görünüm ayarlarını kök öğeye uygular (renkler, cam, yoğunluk anında değişir)
+function applyAppearance(cfg) {
+  const root = document.documentElement.dataset;
+  root.accent = cfg.accent || 'blue';
+  root.selection = cfg.selection || 'neutral';
+  root.glass = cfg.glass || 'balanced';
+  root.density = cfg.density || 'normal';
+}
+
 const Settings = (() => {
   const el = document.getElementById('settings');
   const TABS = [
     ['general', 'Genel', 'gear'],
+    ['appearance', 'Görünüm', 'palette'],
     ['sites', 'Siteler', 'globe'],
     ['engines', 'Arama kısayolları', 'search'],
     ['commands', 'Özel komutlar', 'terminal'],
@@ -54,6 +77,7 @@ const Settings = (() => {
     error = '';
     Object.assign(cfg, patch);
     state.cfg = cfg;
+    applyAppearance(cfg);
     return true;
   }
 
@@ -83,11 +107,7 @@ const Settings = (() => {
             row('Bilgisayar açılınca başlat', 'Arka planda sessizce çalışır', sw('launchAtStartup', cfg.launchAtStartup))
         )}
         ${group(
-          row('Görünüm', '', `<select class="field" data-key="theme">
-            <option value="dark" ${cfg.theme === 'dark' ? 'selected' : ''}>Koyu</option>
-            <option value="light" ${cfg.theme === 'light' ? 'selected' : ''}>Açık</option>
-            <option value="system" ${cfg.theme === 'system' ? 'selected' : ''}>Sistem</option></select>`) +
-            row('Gösterilecek sonuç sayısı', '', `<select class="field" data-key="maxResults" data-number>${[6, 8, 9, 10, 12, 15, 20].map((n) => `<option ${n === cfg.maxResults ? 'selected' : ''}>${n}</option>`).join('')}</select>`) +
+          row('Gösterilecek sonuç sayısı', '', `<select class="field" data-key="maxResults" data-number>${[6, 8, 9, 10, 12, 15, 20].map((n) => `<option ${n === cfg.maxResults ? 'selected' : ''}>${n}</option>`).join('')}</select>`) +
             row('Varsayılan arama motoru', 'Hiçbir şey bulunamazsa en altta çıkar', `<select class="field" data-key="defaultEngine">${engines}</select>`),
           'Arama'
         )}
@@ -99,6 +119,40 @@ const Settings = (() => {
           'Akıllı özellikler'
         )}
         ${group(row('Kullanım geçmişi', 'Sık kullanılanlar sıralaması bu geçmişe göre yapılır', `<button class="btn" id="clear-usage">Temizle</button>`), 'Gizlilik')}`;
+    },
+
+    appearance() {
+      const themeCard = (val, label) => `
+        <button class="theme-card${cfg.theme === val ? ' active' : ''}" data-set="theme" data-val="${val}">
+          <span class="preview preview-${val}"><span class="pv-win"><i></i><i></i><i></i></span></span>
+          <span class="tc-label">${label}</span>
+        </button>`;
+      const current = ACCENTS.find((a) => a.id === cfg.accent) || ACCENTS[0];
+      const swatches = ACCENTS.map(
+        (a) => `<button class="swatch${a.id === cfg.accent ? ' active' : ''}" data-set="accent" data-val="${a.id}" style="--sw:${a.color}" title="${a.name}" aria-label="${a.name}"></button>`
+      ).join('');
+      const segmented = (key, options) =>
+        `<div class="segmented">${options.map(([v, l]) => `<button data-set="${key}" data-val="${v}" class="${cfg[key] === v ? 'active' : ''}">${l}</button>`).join('')}</div>`;
+      return `
+        <h2>Görünüm</h2>
+        <div class="group theme-cards">
+          ${themeCard('system', 'Otomatik')}${themeCard('light', 'Açık')}${themeCard('dark', 'Koyu')}
+        </div>
+        ${group(
+          row('Vurgu rengi', current.name, `<div class="swatches">${swatches}</div>`) +
+            row('Seçim vurgusu', 'Seçili satır nötr gri mi, vurgu renginde mi olsun', segmented('selection', [['neutral', 'Nötr'], ['accent', 'Renkli']])),
+          'Renk'
+        )}
+        ${group(
+          row('Cam', cfg.platform === 'win32' ? 'Pencerenin arkası ne kadar görünsün' : 'Panelin ne kadar saydam olacağı', segmented('glass', [['clear', 'Şeffaf'], ['balanced', 'Dengeli'], ['frosted', 'Buzlu']])) +
+            row('Yoğunluk', 'Satır ve kare boyutu', segmented('density', [['compact', 'Sıkı'], ['normal', 'Normal'], ['comfortable', 'Ferah']])),
+          'Malzeme'
+        )}
+        <div class="group-title">Önizleme</div>
+        <div class="group live-preview">
+          <div class="lp-row sel">${symTile('globe', 28)}<div><b>YazılımHub Discord</b><small>discord.gg/yazilimhub</small></div></div>
+          <div class="lp-row">${symTile('terminal', 28)}<div><b>Terminal komutu</b><small>&gt; npm run dev</small></div></div>
+        </div>`;
     },
 
     sites() {
@@ -236,6 +290,15 @@ const Settings = (() => {
     const t = e.target.closest('button, [data-tab], #hotkey');
     if (!t) return;
     const d = t.dataset;
+    // Görünüm seçimleri (tema kartı, renk, segment): anında uygula
+    if (d.set) {
+      if (cfg[d.set] === d.val) return;
+      if (await save({ [d.set]: d.val })) {
+        if (d.set === 'theme') applyTheme(d.val);
+        render();
+      }
+      return;
+    }
     if (d.tab) {
       tab = d.tab;
       error = '';

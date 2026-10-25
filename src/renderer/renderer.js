@@ -214,6 +214,7 @@ function updateFooter() {
 }
 
 function updateMode(q) {
+  document.querySelector('.searchbar').classList.toggle('has-query', !!q.trim());
   let label = '';
   if (q.startsWith('>')) label = 'Terminal';
   else if (/^(~|\/|[a-zA-Z]:[\\/])/.test(q)) label = 'Dosya gezgini';
@@ -433,5 +434,6 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => appl
 (async () => {
   state.cfg = await yh.getSettings();
   applyTheme(state.cfg.theme);
+  applyAppearance(state.cfg);
   refresh();
 })();

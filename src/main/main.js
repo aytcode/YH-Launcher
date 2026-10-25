@@ -400,7 +400,7 @@ function setupIpc() {
       }
     }
     if ('launchAtStartup' in patch) setLaunchAtStartup(patch.launchAtStartup);
-    const allowed = ['hotkey', 'launchAtStartup', 'theme', 'maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
+    const allowed = ['hotkey', 'launchAtStartup', 'theme', 'accent', 'selection', 'glass', 'density','maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
     for (const k of Object.keys(patch)) if (allowed.includes(k)) store.data[k] = patch[k];
     store.save();
     if ('fileSearch' in patch || 'extraFileRoots' in patch) search.files.refresh();
