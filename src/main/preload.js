@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 contextBridge.exposeInMainWorld('yh', {
   platform: process.platform,
@@ -15,5 +15,8 @@ contextBridge.exposeInMainWorld('yh', {
   openUrl: (url) => ipcRenderer.invoke('open-url', url),
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   hide: () => ipcRenderer.send('hide'),
+  relaunch: () => ipcRenderer.invoke('relaunch'),
+  // Gizliyken görsel/kaynak önbelleğini bırak
+  trimMemory: () => webFrame.clearCache(),
   on: (channel, fn) => ipcRenderer.on(channel, (_e, ...args) => fn(...args)),
 });

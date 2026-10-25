@@ -8,12 +8,20 @@ const uninstall = require('./uninstall');
 const { isWin, runDetached, spawnDetached, runInTerminal, powershell, psQuote } = require('./util');
 
 const isLinux = process.platform === 'linux';
+let store;
 if (isLinux) {
   app.commandLine.appendSwitch('enable-transparent-visuals');
   // Wayland'de global kısayollar XDG portalı üzerinden çalışır
   app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal');
 }
 if (!app.requestSingleInstanceLock()) app.quit();
+
+// Ayarlar erken okunur: donanım hızlandırma kararı uygulama hazır olmadan verilmeli.
+// Varsayılan kapalı: ~45 MB daha az RAM; Windows'taki cam efektini zaten sistem çiziyor.
+store = new Store();
+if (!store.get('hardwareAcceleration')) app.disableHardwareAcceleration();
+// Launcher'ın kullanmadığı Chromium özellikleri
+app.commandLine.appendSwitch('disable-features', 'SpareRendererForSitePerProcess,HardwareMediaKeyHandling,MediaSessionService');
 
 // Varsayılan kısayol başka bir program tarafından kullanılıyorsa sırayla denenir
 const FALLBACK_HOTKEYS = ['Alt+Space', 'Ctrl+Alt+Space', 'Super+Space', 'Ctrl+Shift+Space'];
@@ -23,7 +31,6 @@ const SAFE_PROTOCOLS = /^(https?|mailto|ms-settings|discord|steam|spotify|vscode
 
 let win;
 let tray;
-let store;
 let search;
 let modalOpen = false; // onay penceresi açıkken bulanıklaşınca gizlenmesin
 
@@ -54,6 +61,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      spellcheck: false, // yazım denetimi sözlükleri yüklenmesin
     },
   });
   win.loadFile(path.join(__dirname, '../renderer/index.html'), { query: { material: useMaterial ? '1' : '0' } });
@@ -83,12 +91,23 @@ function show(view = 'search') {
   win.show();
   win.focus();
   win.webContents.send('shown', view);
+  clearTimeout(trimTimer);
+  // Arka planda periyodik tarama yok: sadece pencere açılınca, liste eskiyse yenile
+  search.refreshIfStale();
 }
+
+// Gizlendikten bir süre sonra çöp toplayıcıyı çalıştırıp belleği geri ver
+const v8 = require('v8');
+v8.setFlagsFromString('--expose_gc');
+const runGc = require('vm').runInNewContext('gc');
+let trimTimer;
 
 function hide() {
   if (win?.isVisible()) {
     win.hide();
     win.webContents.send('hidden');
+    clearTimeout(trimTimer);
+    trimTimer = setTimeout(() => runGc?.(), 3000);
   }
 }
 
@@ -146,6 +165,8 @@ function registerStartupHotkey() {
     tray?.setToolTip(`YH Launcher (${alt})`);
     notify('Kısayol değiştirildi', `${saved} başka bir uygulama tarafından kullanılıyor; ${alt} atandı. Ayarlardan değiştirebilirsin.`);
   } else {
+    // Kısayol yoksa launcher'a ulaşmanın tek yolu tepsi kalır: ayardan bağımsız göster
+    if (!tray) createTray();
     notify(
       'Kısayol kaydedilemedi',
       isLinux
@@ -191,10 +212,8 @@ async function runItem(item, mods = {}) {
       break;
     case 'url': {
       openUrl(a.url);
-      if (a.learn) {
-        const added = search.web.learn(a.url);
-        if (added) notify('Yeni sık kullanılan site', `${added} sık ziyaret ettiğin için sitelerine eklendi.`);
-      }
+      // Sessizce öğren; bildirimle rahatsız etme (Ayarlar › Siteler'de "otomatik" etiketiyle görünür)
+      if (a.learn) search.web.learn(a.url);
       break;
     }
     case 'copy':
@@ -242,8 +261,7 @@ async function runInternal(name) {
       return { keepOpen: true, openSettings: true };
     case 'reload':
       await search.reload();
-      notify('YH Launcher', `${search.apps.items.length} uygulama bulundu.`);
-      return { keepOpen: true, refresh: true };
+      return { keepOpen: true, refresh: true, toast: `${search.apps.items.length} uygulama bulundu` };
     case 'plugins-folder':
       shell.openPath(search.plugins.userDir);
       break;
@@ -400,7 +418,14 @@ function setupIpc() {
       }
     }
     if ('launchAtStartup' in patch) setLaunchAtStartup(patch.launchAtStartup);
-    const allowed = ['hotkey', 'launchAtStartup', 'theme', 'accent', 'selection', 'glass', 'density','maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
+    if ('showTray' in patch) {
+      if (patch.showTray && !tray) createTray();
+      if (!patch.showTray && tray) {
+        tray.destroy();
+        tray = null;
+      }
+    }
+    const allowed = ['hotkey', 'launchAtStartup', 'showTray', 'hardwareAcceleration', 'theme','accent', 'selection', 'glass', 'density','maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
     for (const k of Object.keys(patch)) if (allowed.includes(k)) store.data[k] = patch[k];
     store.save();
     if ('fileSearch' in patch || 'extraFileRoots' in patch) search.files.refresh();
@@ -428,6 +453,12 @@ function setupIpc() {
     }
   });
   ipcMain.on('hide', hide);
+  ipcMain.handle('relaunch', () => {
+    store.flush();
+    app.relaunch({ args: process.argv.slice(1).filter((a) => a !== '--hidden') });
+    app.isQuitting = true;
+    app.exit(0);
+  });
 }
 
 // ---------------------------------------------------------------- tepsi
@@ -457,7 +488,6 @@ app.on('second-instance', (_e, argv) => (argv.includes('--toggle') ? toggle() : 
 
 app.whenReady().then(async () => {
   if (isWin) app.setAppUserModelId('com.yazilimhub.launcher');
-  store = new Store();
   nativeTheme.themeSource = store.get('theme');
   search = new Search(store, {
     openUrl,
@@ -470,13 +500,11 @@ app.whenReady().then(async () => {
   });
   setupIpc();
   createWindow();
-  createTray();
+  // Sağ alttaki tepsi simgesi isteğe bağlı (Ayarlar › Genel); varsayılan kapalı
+  if (store.get('showTray')) createTray();
   await search.init();
 
   registerStartupHotkey();
-  // Yeni kurulan uygulamaları yakalamak için ara ara tara
-  setInterval(() => search.apps.refresh().catch(() => {}), 10 * 60 * 1000);
-  setInterval(() => search.files.refresh().catch(() => {}), 30 * 60 * 1000);
 
   if (!process.argv.includes('--hidden')) {
     if (win.webContents.isLoading()) win.webContents.once('did-finish-load', () => show());

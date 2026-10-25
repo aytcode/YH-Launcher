@@ -421,6 +421,12 @@ yh.on('hidden', () => {
   if (Settings.isOpen) Settings.close(false);
   qEl.value = '';
   state.view = null;
+  // Gizliyken ekrandaki ikonları (data URL) ve önbelleği tutma; açılınca anında yeniden çizilir
+  state.token++;
+  state.flat = [];
+  innerEl.innerHTML = '';
+  hlEl = null;
+  yh.trimMemory();
 });
 
 // Ayar önce güncellenmeli: tema değişince prefers-color-scheme de değişir ve

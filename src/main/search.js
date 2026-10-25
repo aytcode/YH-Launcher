@@ -30,6 +30,14 @@ class Search {
     this.files.refresh().catch((e) => console.error(e));
   }
 
+  // Pencere açılınca çağrılır: uygulama listesi 10 dk, dosya indeksi 30 dk'dan eskiyse
+  // arka planda yenile. Böylece launcher kullanılmazken hiç iş yapmaz.
+  refreshIfStale() {
+    const now = Date.now();
+    if (now - this.apps.scannedAt > 10 * 60 * 1000) this.apps.refresh().catch(() => {});
+    if (this.files.indexedAt && now - this.files.indexedAt > 30 * 60 * 1000) this.files.refresh().catch(() => {});
+  }
+
   async reload() {
     icons.clear();
     await Promise.all([this.apps.refresh(), this.plugins.load()]);

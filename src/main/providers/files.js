@@ -27,11 +27,40 @@ function fileItem(full, isDir) {
   };
 }
 
+// Bellek dostu indeks: tam yol yerine sadece isim + üst klasörün sırası tutulur.
+// 80 bin girdi için tam yollar ~15 MB iken bu yapı birkaç MB'tır; yol gerektiğinde üretilir.
+class FileIndex {
+  constructor() {
+    this.names = [];
+    this.parents = new Int32Array(MAX_ENTRIES + 64);
+    this.dirs = new Uint8Array(MAX_ENTRIES + 64);
+  }
+
+  get size() {
+    return this.names.length;
+  }
+
+  add(name, parent, isDir) {
+    const i = this.names.length;
+    this.names.push(name);
+    this.parents[i] = parent;
+    this.dirs[i] = isDir ? 1 : 0;
+    return i;
+  }
+
+  fullPath(i) {
+    const parts = [];
+    for (let j = i; j >= 0; j = this.parents[j]) parts.push(this.names[j]);
+    return path.join(...parts.reverse());
+  }
+}
+
 class Files {
   constructor(store) {
     this.store = store;
-    this.index = []; // { name, full, dir }
+    this.index = new FileIndex();
     this.indexing = false;
+    this.indexedAt = 0;
   }
 
   roots() {
@@ -41,44 +70,51 @@ class Files {
   async refresh() {
     if (this.indexing || !this.store.get('fileSearch')) return;
     this.indexing = true;
-    const out = [];
-    const walk = async (dir, depth) => {
-      if (depth > MAX_DEPTH || out.length >= MAX_ENTRIES) return;
+    const idx = new FileIndex();
+    const walk = async (dir, parent, depth) => {
+      if (depth > MAX_DEPTH || idx.size >= MAX_ENTRIES) return;
       let entries;
       try {
         entries = await fs.promises.readdir(dir, { withFileTypes: true });
       } catch {
         return;
       }
+      const subdirs = [];
       for (const e of entries) {
-        if (out.length >= MAX_ENTRIES) return;
+        if (idx.size >= MAX_ENTRIES) break;
         if (e.name.startsWith('.') || SKIP.has(e.name)) continue;
         const isDir = e.isDirectory();
         // Kısayollar zaten "Uygulama" olarak listeleniyor
         if (!isDir && SHORTCUT_EXT.test(e.name)) continue;
-        const full = path.join(dir, e.name);
-        out.push({ name: e.name, full, dir: isDir });
-        if (isDir && !e.isSymbolicLink()) await walk(full, depth + 1);
+        const i = idx.add(e.name, parent, isDir);
+        if (isDir && !e.isSymbolicLink()) subdirs.push([path.join(dir, e.name), i]);
       }
       // olay döngüsünü kilitlememek için ara ara nefes al
       await new Promise((r) => setImmediate(r));
+      for (const [sub, i] of subdirs) await walk(sub, i, depth + 1);
     };
     try {
-      for (const r of this.roots()) await walk(r, 0);
-      this.index = out;
+      for (const r of this.roots()) {
+        const rootIdx = idx.add(r, -1, true);
+        await walk(r, rootIdx, 0);
+      }
+      this.index = idx;
+      this.indexedAt = Date.now();
     } finally {
       this.indexing = false;
     }
   }
 
   search(q, limit = 30) {
+    const { names, dirs } = this.index;
     const res = [];
-    for (const f of this.index) {
-      const s = fuzzy.score(q, f.name);
-      if (s >= 550) res.push({ f, s });
+    for (let i = 0; i < names.length; i++) {
+      if (this.index.parents[i] < 0) continue; // kök klasörün kendisi
+      const s = fuzzy.score(q, names[i]);
+      if (s >= 550) res.push({ i, s });
     }
-    res.sort((a, b) => b.s - a.s || a.f.full.length - b.f.full.length);
-    return res.slice(0, limit).map(({ f, s }) => ({ ...fileItem(f.full, f.dir), score: s }));
+    res.sort((a, b) => b.s - a.s || names[a.i].length - names[b.i].length);
+    return res.slice(0, limit).map(({ i, s }) => ({ ...fileItem(this.index.fullPath(i), dirs[i] === 1), score: s }));
   }
 
   isPathQuery(q) {

@@ -5,6 +5,8 @@ const { app } = require('electron');
 const DEFAULTS = {
   hotkey: 'Alt+Space',
   launchAtStartup: false,
+  showTray: false, // sağ alttaki tepsi simgesi
+  hardwareAcceleration: false, // kapalıyken daha az RAM (GPU süreci küçülür)
   theme: 'dark', // dark | light | system
   accent: 'blue', // blue | purple | pink | red | orange | yellow | green | indigo | graphite
   selection: 'neutral', // neutral | accent

@@ -104,7 +104,17 @@ const Settings = (() => {
         ${group(
           row('Açma kısayolu', 'Tıkla ve yeni tuş kombinasyonuna bas', `<input class="field hotkey-field" id="hotkey" readonly value="${esc(cfg.hotkey)}">`) +
             (error ? `<div class="error-text">${esc(error)}</div>` : '') +
-            row('Bilgisayar açılınca başlat', 'Arka planda sessizce çalışır', sw('launchAtStartup', cfg.launchAtStartup))
+            row('Bilgisayar açılınca başlat', 'Arka planda sessizce çalışır', sw('launchAtStartup', cfg.launchAtStartup)) +
+            row(
+              cfg.platform === 'win32' ? 'Sağ altta simge göster' : 'Tepside simge göster',
+              'Kapalıyken launcher sadece kısayolla açılır. Exe\'ye tekrar tıklamak da açar.',
+              sw('showTray', cfg.showTray)
+            )
+        )}
+        ${group(
+          row('Donanım hızlandırma', 'Kapalıyken ~45 MB daha az RAM kullanır. Değişiklik yeniden başlatınca uygulanır.', sw('hardwareAcceleration', cfg.hardwareAcceleration)) +
+            row('Yeniden başlat', 'Ayarı hemen uygulamak için', `<button class="btn" id="relaunch">Yeniden başlat</button>`),
+          'Performans'
         )}
         ${group(
           row('Gösterilecek sonuç sayısı', '', `<select class="field" data-key="maxResults" data-number>${[6, 8, 9, 10, 12, 15, 20].map((n) => `<option ${n === cfg.maxResults ? 'selected' : ''}>${n}</option>`).join('')}</select>`) +
@@ -315,6 +325,8 @@ const Settings = (() => {
       if (dir) await save({ extraFileRoots: [...cfg.extraFileRoots, dir] });
     } else if (d.delRoot != null) {
       await save({ extraFileRoots: cfg.extraFileRoots.filter((_, i) => i !== +d.delRoot) });
+    } else if (t.id === 'relaunch') {
+      return yh.relaunch();
     } else if (t.id === 'clear-usage') {
       await save({ usage: {} });
       toast('Kullanım geçmişi temizlendi');

@@ -232,9 +232,11 @@ class Apps {
   constructor() {
     this.items = [];
     this.byId = new Map();
+    this.scannedAt = 0;
   }
 
   async refresh() {
+    this.scannedAt = Date.now();
     this.items = isWin ? await scanWindows() : await scanLinux();
     this.byId = new Map(this.items.map((a) => [a.id, a]));
     // Store logoları birkaç saniye sürebilir: liste hemen kullanılabilsin, ikonlar sonra gelsin
