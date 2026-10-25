@@ -34,9 +34,14 @@ app.whenReady().then(async () => {
     await wait(250);
     win = BrowserWindow.getAllWindows()[0];
   }
-  await wait(5000); // uygulama taraması + eklentiler
   win.removeAllListeners('blur');
   const wc = win.webContents;
+  // Uygulama taraması bitene kadar bekle (yavaş CI makinelerinde sabit süre yetmez)
+  for (let i = 0; i < 120; i++) {
+    await wait(500);
+    const n = await wc.executeJavaScript(`yh.search('a').then(r=>r.sections[0].items.filter(i=>i.type==='app').length)`).catch(() => 0);
+    if (n > 0) break;
+  }
   const errors = [];
   wc.on('console-message', (e) => e.level === 'error' && errors.push(e.message));
   win.show();

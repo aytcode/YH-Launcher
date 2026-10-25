@@ -92,7 +92,6 @@ async function scanWindows() {
   } catch (e) {
     console.warn('Get-StartApps okunamadı:', e.message);
   }
-  await attachStoreLogos([...apps.values()].filter((a) => a.appId));
   return [...apps.values()];
 }
 
@@ -238,6 +237,8 @@ class Apps {
   async refresh() {
     this.items = isWin ? await scanWindows() : await scanLinux();
     this.byId = new Map(this.items.map((a) => [a.id, a]));
+    // Store logoları birkaç saniye sürebilir: liste hemen kullanılabilsin, ikonlar sonra gelsin
+    if (isWin) attachStoreLogos(this.items.filter((a) => a.appId)).catch(() => {});
     return this.items.length;
   }
 
