@@ -12,3 +12,8 @@ let current = 'dark';
 yh.getSettings().then((s) => applyTheme((current = s.theme)));
 yh.on('theme', (t) => applyTheme((current = t)));
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(current));
+
+// Pencere görev çubuğu yüksekliğinde; kutunun kendisi Windows arama kutusunun yüksekliğinde
+yh.on('pill-layout', ({ height }) => {
+  document.documentElement.style.setProperty('--pill-h', `${height}px`);
+});

@@ -8,7 +8,7 @@ const path = require('path');
 const readline = require('readline');
 const { spawn, execFile } = require('child_process');
 const { app, BrowserWindow, screen } = require('electron');
-const { isWin, run } = require('./util');
+const { isWin, run, powershell } = require('./util');
 
 const HELPER_VERSION = 2; // yh-helper.cs değişince artır (yeniden derlensin)
 const PILL_W = 220;
@@ -27,8 +27,10 @@ class Taskbar {
     this.lastError = null;
     this.gen = 0;
     this.useShell = false;
+    this.searchRect = null;
     if (isWin) {
-      const relayout = () => this.updatePill();
+      // Ekran/ölçek değişince Windows arama kutusunun yeri de değişir
+      const relayout = () => this.refreshSearchRect();
       screen.on('display-metrics-changed', relayout);
       screen.on('display-added', relayout);
       screen.on('display-removed', relayout);
@@ -94,7 +96,9 @@ class Taskbar {
     if (!s.get('taskbarSearch')) this.fullscreen = false;
     // Kutu ilk açıldığında görev çubuğu simgelerinin üstüne binmeyecek bir yer seç
     if (s.get('taskbarSearch') && s.get('taskbarSearchPos') == null) s.set('taskbarSearchPos', await this.defaultPillPos());
-    this.updatePill();
+    // Windows arama kutusunun yeri ilk açılışta bir kez okunur (kaydırıcı değişince tekrar gerekmez)
+    if (s.get('taskbarSearch') && !this.searchRect) await this.refreshSearchRect();
+    else this.updatePill();
     if (args.join(' ') === this.helperArgs && (this.proc || !args.length)) return;
     this.stopHelper();
     if (!args.length) {
@@ -203,7 +207,35 @@ class Taskbar {
     return leftAligned ? 50 : 8;
   }
 
-  pillBounds() {
+  // Windows'un arama kutusunun/düğmesinin ekrandaki yeri (UI Automation, dilden bağımsız
+  // "SearchButton" kimliği). Kutu görünürse YH kutusu tam onun üstüne oturur: yeri korunur,
+  // simgeler kaymaz, Gezgin'i yeniden başlatmak gerekmez.
+  async findWindowsSearchRect() {
+    const script =
+      'Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes; ' +
+      '$A=[System.Windows.Automation.AutomationElement]; $S=[System.Windows.Automation.TreeScope]; ' +
+      "$t=$A::RootElement.FindFirst($S::Children,(New-Object System.Windows.Automation.PropertyCondition($A::ClassNameProperty,'Shell_TrayWnd'))); if(-not $t){exit}; " +
+      "$s=$t.FindFirst($S::Descendants,(New-Object System.Windows.Automation.PropertyCondition($A::AutomationIdProperty,'SearchButton'))); if(-not $s){exit}; " +
+      "$b=$s.Current.BoundingRectangle; if(-not $s.Current.IsOffscreen -and $b.Width -gt 0){ '{0},{1},{2},{3}' -f [int]$b.X,[int]$b.Y,[int]$b.Width,[int]$b.Height }";
+    try {
+      const m = (await powershell(script, 20000)).trim().match(/^(-?\d+),(-?\d+),(\d+),(\d+)$/);
+      if (!m) return null;
+      const sf = screen.getPrimaryDisplay().scaleFactor; // UI Automation fiziksel piksel verir
+      const [x, y, w, h] = m.slice(1).map(Number);
+      return { x: Math.round(x / sf), y: Math.round(y / sf), width: Math.round(w / sf), height: Math.round(h / sf) };
+    } catch {
+      return null;
+    }
+  }
+
+  async refreshSearchRect() {
+    this.searchRect = this.store.get('taskbarSearch') ? await this.findWindowsSearchRect() : null;
+    this.updatePill();
+  }
+
+  // Pencere görev çubuğu yüksekliğinde (Windows pencereleri ~39 px'den kısa olamıyor);
+  // kutunun kendisi içinde ortalanır. Dönen değer: { bounds, pillHeight }
+  pillLayout() {
     const d = screen.getPrimaryDisplay();
     const B = d.bounds;
     const W = d.workArea;
@@ -214,13 +246,15 @@ class Taskbar {
     if (bottom >= 24) [tbY, tbH] = [W.y + W.height, bottom];
     else if (top >= 24) [tbY, tbH] = [B.y, top];
     else return null; // görev çubuğu dikey ya da otomatik gizli: gösterme
-    const h = Math.min(36, tbH - 10);
+    const r = this.searchRect;
+    if (r && r.y >= tbY - 2 && r.y + r.height <= tbY + tbH + 2) {
+      return { bounds: { x: r.x, y: tbY, width: r.width, height: tbH }, pillHeight: r.height, overlay: true };
+    }
     const pos = Math.max(0, Math.min(100, Number(this.store.get('taskbarSearchPos')) || 0));
     return {
-      x: Math.round(B.x + 8 + ((B.width - PILL_W - 16) * pos) / 100),
-      y: Math.round(tbY + (tbH - h) / 2),
-      width: PILL_W,
-      height: h,
+      bounds: { x: Math.round(B.x + 8 + ((B.width - PILL_W - 16) * pos) / 100), y: tbY, width: PILL_W, height: tbH },
+      pillHeight: Math.min(36, tbH - 10),
+      overlay: false,
     };
   }
 
@@ -257,18 +291,22 @@ class Taskbar {
 
   updatePill() {
     const want = isWin && this.store.get('taskbarSearch') && !this.fullscreen;
-    const bounds = want && this.pillBounds();
-    if (!bounds) {
+    const layout = want && this.pillLayout();
+    if (!layout) {
       this.pill?.hide();
       clearInterval(this.topTimer);
       this.topTimer = null;
       return;
     }
     if (!this.pill) this.createPill();
-    this.pill.setBounds(bounds);
+    this.pill.setBounds(layout.bounds);
+    const send = () => this.pill?.webContents.send('pill-layout', { height: layout.pillHeight, overlay: layout.overlay });
+    if (this.pill.webContents.isLoading()) this.pill.webContents.once('did-finish-load', send);
+    else send();
     this.pill.showInactive();
-    // Görev çubuğuna tıklanınca Windows onu öne alır; arama kutusunu tekrar üste koy
-    if (!this.topTimer) this.topTimer = setInterval(() => this.pill?.isVisible() && this.pill.moveTop(), 2000);
+    // Görev çubuğuna tıklanınca Windows onu öne alır (altındaki Windows kutusu bir an görünür);
+    // YH kutusunu hemen tekrar üste koy
+    if (!this.topTimer) this.topTimer = setInterval(() => this.pill?.isVisible() && this.pill.moveTop(), 700);
   }
 
   sendTheme(theme) {
@@ -308,14 +346,35 @@ class Taskbar {
 
   // Bazı Windows sürümleri arama kutusu ayarını sadece Gezgin başlarken okur.
   // Gezgin kapatılınca Windows onu genelde kendisi açar; açmazsa biz başlatırız.
+  //
+  // Dikkat: kapanmakta olan eski Gezgin bir süre listede görünür; "çalışıyor" demek için
+  // YENİ bir süreç kimliği (PID) görmek gerekir. Yoksa görev çubuğu ve masaüstü kaybolur.
   async restartExplorer() {
+    const pids = async () => {
+      const t = await run('tasklist', ['/FI', 'IMAGENAME eq explorer.exe', '/FO', 'CSV', '/NH']);
+      return [...t.stdout.matchAll(/"explorer\.exe","(\d+)"/gi)].map((m) => m[1]);
+    };
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const before = await pids();
+    const fresh = async () => (await pids()).some((p) => !before.includes(p));
     await run('taskkill', ['/f', '/im', 'explorer.exe']);
-    for (let i = 0; i < 10; i++) {
-      await new Promise((r) => setTimeout(r, 500));
-      const t = await run('tasklist', ['/FI', 'IMAGENAME eq explorer.exe', '/NH']);
-      if (/explorer\.exe/i.test(t.stdout)) return;
+    // Eski süreçler tamamen kapansın
+    for (let i = 0; i < 20 && (await pids()).some((p) => before.includes(p)); i++) await wait(250);
+    // Windows genelde kendisi yeniden açar
+    for (let i = 0; i < 8; i++) {
+      if (await fresh()) return;
+      await wait(500);
     }
-    spawn('explorer.exe', [], { detached: true, stdio: 'ignore' }).unref();
+    // Açmadıysa biz başlatırız; olmazsa bir kez daha dene
+    const exe = path.join(process.env.WINDIR || 'C:\\Windows', 'explorer.exe');
+    for (let attempt = 0; attempt < 2; attempt++) {
+      spawn(exe, [], { detached: true, stdio: 'ignore' }).unref();
+      for (let i = 0; i < 10; i++) {
+        await wait(500);
+        if (await fresh()) return;
+      }
+    }
+    throw new Error('Windows Gezgini yeniden başlatılamadı. Ctrl+Shift+Esc › Yeni görev çalıştır › explorer yaz.');
   }
 
   dispose() {

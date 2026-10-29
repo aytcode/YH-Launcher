@@ -452,7 +452,15 @@ function setupIpc() {
         'Şimdi uygula',
         'Sonra'
       );
-      if (restart) await taskbar.restartExplorer();
+      if (restart) {
+        try {
+          await taskbar.restartExplorer();
+        } catch (e) {
+          return { ok: false, error: e.message };
+        }
+        // Görünüm değişti: YH kutusu Windows kutusunun yeni yerine (ya da yokluğuna) uysun
+        setTimeout(() => taskbar.refreshSearchRect(), 2500);
+      }
     }
     if ('hotkey' in patch && patch.hotkey !== store.get('hotkey')) {
       if (!registerHotkey(patch.hotkey)) {
