@@ -178,7 +178,7 @@ const Settings = (() => {
         <p class="hint">Hepsi isteğe bağlı. İstediğin zaman kapatabilirsin; kapatınca Windows eski hâline döner.</p>
         ${cfg.taskbarError ? `<div class="group"><div class="error-text" style="padding:12px 14px">${esc(cfg.taskbarError)}</div></div>` : ''}
         ${group(
-          row('Windows araması YH Launcher\'ı açsın', 'Görev çubuğundaki Windows arama kutusuna/düğmesine tıklayınca ya da Win+S\'ye basınca Windows araması yerine YH Launcher açılır.', sw('searchRedirect', cfg.searchRedirect)) +
+          row('Windows araması YH Launcher\'ı açsın', 'Win+S\'ye basınca Windows araması yerine YH Launcher açılır. Win tuşu ve Başlat menüsü normal çalışır.', sw('searchRedirect', cfg.searchRedirect)) +
             row('Windows tuşu YH Launcher\'ı açsın', 'Win tuşuna tek başına basınca Başlat yerine YH Launcher açılır. Win+E, Win+D gibi kısayollar çalışmaya devam eder.', sw('winKey', cfg.winKey)),
           'Windows araması'
         )}

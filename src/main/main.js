@@ -96,6 +96,8 @@ function show(view = 'search') {
   clearTimeout(trimTimer);
   // Arka planda periyodik tarama yok: sadece pencere açılınca, liste eskiyse yenile
   search.refreshIfStale();
+  // Windows arama kutusu Ayarlar'dan gizlendiyse/gösterildiyse YH kutusu yerini bulsun
+  taskbar?.refreshSearchRectIfStale();
 }
 
 // Gizlendikten bir süre sonra çöp toplayıcıyı çalıştırıp belleği geri ver

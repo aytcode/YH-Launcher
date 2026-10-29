@@ -10,7 +10,7 @@ const { spawn, execFile } = require('child_process');
 const { app, BrowserWindow, screen } = require('electron');
 const { isWin, run, powershell } = require('./util');
 
-const HELPER_VERSION = 2; // yh-helper.cs değişince artır (yeniden derlensin)
+const HELPER_VERSION = 3; // yh-helper.cs değişince artır (yeniden derlensin)
 const PILL_W = 220;
 const SEARCH_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Search';
 
@@ -92,7 +92,8 @@ class Taskbar {
   async apply() {
     if (!isWin) return;
     const s = this.store;
-    const args = [s.get('winKey') && '--win', s.get('searchRedirect') && '--search', s.get('taskbarSearch') && '--fs'].filter(Boolean);
+    const redirect = s.get('searchRedirect');
+    const args = [s.get('winKey') && '--win', redirect && '--wins', redirect && '--search', s.get('taskbarSearch') && '--fs'].filter(Boolean);
     if (!s.get('taskbarSearch')) this.fullscreen = false;
     // Kutu ilk açıldığında görev çubuğu simgelerinin üstüne binmeyecek bir yer seç
     if (s.get('taskbarSearch') && s.get('taskbarSearchPos') == null) s.set('taskbarSearchPos', await this.defaultPillPos());
@@ -229,8 +230,15 @@ class Taskbar {
   }
 
   async refreshSearchRect() {
+    this.searchRectAt = Date.now();
     this.searchRect = this.store.get('taskbarSearch') ? await this.findWindowsSearchRect() : null;
     this.updatePill();
+  }
+
+  // Launcher açılışında en fazla dakikada bir (UI Automation sorgusu ucuz değil)
+  refreshSearchRectIfStale() {
+    if (!isWin || !this.store.get('taskbarSearch') || Date.now() - (this.searchRectAt || 0) < 60000) return;
+    this.refreshSearchRect();
   }
 
   // Pencere görev çubuğu yüksekliğinde (Windows pencereleri ~39 px'den kısa olamıyor);

@@ -3,8 +3,8 @@
 //
 //   yh-helper.exe [--win] [--wins] [--search] [--fs]   olayları stdout'a yazar:
 //       WIN      Windows tuşu tek başına basıldı (--win), Win+S (--wins) ya da Windows
-//                araması açıldı (--search: görev çubuğundaki arama kutusu/düğmesi, Win+S;
-//                arama paneli kapatılır, yerine YH Launcher açılır)
+//                araması açıldı (--search, sadece Windows 10: arama paneli kapatılır,
+//                yerine YH Launcher açılır)
 //       FS 1/0   ön plandaki pencere tam ekran oldu / çıktı (--fs)
 //   yh-helper.exe --broadcast                 görev çubuğuna ayar değişti mesajı gönderir
 //
@@ -63,8 +63,10 @@ public static class YhHelper
     static LowLevelKeyboardProc proc = Hook; // çöp toplayıcı silmesin diye alan olarak tutulur
     static WinEventProc fgProc = OnForeground;
     const uint EVENT_SYSTEM_FOREGROUND = 3, VK_ESCAPE = 0x1B;
-    // Windows 11: SearchHost, Windows 10: SearchApp / SearchUI (Cortana)
-    static readonly string[] SEARCH_PROCS = { "SearchHost", "SearchApp", "SearchUI" };
+    // Windows 10: SearchApp / SearchUI (Cortana). Windows 11'in SearchHost'u bilerek yok:
+    // yeni sürümlerde Başlat menüsü de onun içinde açılır, Win tuşu yanlışlıkla YH'yi açardı.
+    // Windows 11'de Win+S klavye kancasıyla (--wins) yakalanır.
+    static readonly string[] SEARCH_PROCS = { "SearchApp", "SearchUI" };
     static DateTime lastRedirect = DateTime.MinValue;
 
     // Ön plana Windows araması geldiyse kapat ve YH Launcher'ı aç
