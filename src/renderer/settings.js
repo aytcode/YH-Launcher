@@ -183,7 +183,7 @@ const Settings = (() => {
           'Windows araması'
         )}
         ${group(
-          row('Windows arama kutusunu gizle', 'Görev çubuğundaki Windows aramasını tamamen kaldırır. Kapatınca önceki hâline döner.', sw('hideWindowsSearch', cfg.hideWindowsSearch)) +
+          row('Windows arama kutusunu gizle', 'Görev çubuğundaki Windows aramasını kaldırır; uygulamak için görev çubuğu birkaç saniye yeniden başlar. Kapatınca önceki hâline döner.', sw('hideWindowsSearch', cfg.hideWindowsSearch)) +
             row('YH arama kutusu', 'Görev çubuğunun üstünde ayrı bir arama kutusu. Tam ekran oyun ve videolarda gizlenir.', sw('taskbarSearch', cfg.taskbarSearch)) +
             row('Kutunun konumu', 'Simgelerin üstüne binmeyecek bir yere kaydır', `<input type="range" class="range" min="0" max="100" step="1" data-key="taskbarSearchPos" data-number value="${Number(cfg.taskbarSearchPos) || 0}" ${cfg.taskbarSearch ? '' : 'disabled'}>`),
           'Görev çubuğu'

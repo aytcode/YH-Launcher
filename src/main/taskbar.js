@@ -290,8 +290,11 @@ class Taskbar {
     } else {
       value = this.store.get('prevSearchboxMode') ?? 2;
     }
-    const r = await run('reg', ['add', SEARCH_KEY, '/v', 'SearchboxTaskbarMode', '/t', 'REG_DWORD', '/d', String(value), '/f']);
-    if (!r.ok) throw new Error(`Kayıt defteri güncellenemedi: ${r.stderr.trim()}`);
+    // Yeni Windows 11 sürümleri ...ModeCache değerini de okur; ikisi aynı olmalı
+    for (const name of ['SearchboxTaskbarMode', 'SearchboxTaskbarModeCache']) {
+      const r = await run('reg', ['add', SEARCH_KEY, '/v', name, '/t', 'REG_DWORD', '/d', String(value), '/f']);
+      if (!r.ok) throw new Error(`Kayıt defteri güncellenemedi: ${r.stderr.trim()}`);
+    }
     // Görev çubuğuna ayarın değiştiğini bildir (Gezgin'i yeniden başlatmadan uygulansın)
     let sent = false;
     if (!this.useShell) {
@@ -302,6 +305,18 @@ class Taskbar {
       }
     }
     if (!sent) await run('powershell.exe', this.shellArgs(['--broadcast']), 20000);
+  }
+
+  // Bazı Windows sürümleri arama kutusu ayarını sadece Gezgin başlarken okur.
+  // Gezgin kapatılınca Windows onu genelde kendisi açar; açmazsa biz başlatırız.
+  async restartExplorer() {
+    await run('taskkill', ['/f', '/im', 'explorer.exe']);
+    for (let i = 0; i < 10; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      const t = await run('tasklist', ['/FI', 'IMAGENAME eq explorer.exe', '/NH']);
+      if (/explorer\.exe/i.test(t.stdout)) return;
+    }
+    spawn('explorer.exe', [], { detached: true, stdio: 'ignore' }).unref();
   }
 
   dispose() {

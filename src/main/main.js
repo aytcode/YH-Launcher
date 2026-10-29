@@ -129,12 +129,12 @@ function togglePill() {
 
 let taskbar;
 
-async function confirm(message, detail, okLabel = 'Evet') {
+async function confirm(message, detail, okLabel = 'Evet', cancelLabel = 'Vazgeç') {
   modalOpen = true;
   try {
     const { response } = await dialog.showMessageBox(win, {
       type: 'question',
-      buttons: [okLabel, 'Vazgeç'],
+      buttons: [okLabel, cancelLabel],
       defaultId: 1,
       cancelId: 1,
       title: 'YH Launcher',
@@ -435,6 +435,14 @@ function setupIpc() {
       } catch (e) {
         return { ok: false, error: e.message };
       }
+      // Görev çubuğu ayarı çoğu sürümde ancak Gezgin yeniden başlayınca uygulanır
+      const restart = await confirm(
+        patch.hideWindowsSearch ? 'Windows arama kutusu gizlensin mi?' : 'Windows arama kutusu geri getirilsin mi?',
+        'Değişikliğin görünmesi için görev çubuğu (Windows Gezgini) birkaç saniyeliğine yeniden başlatılacak. Açık klasör pencereleri kapanır. "Sonra" dersen bir sonraki oturum açışında uygulanır.',
+        'Şimdi uygula',
+        'Sonra'
+      );
+      if (restart) await taskbar.restartExplorer();
     }
     if ('hotkey' in patch && patch.hotkey !== store.get('hotkey')) {
       if (!registerHotkey(patch.hotkey)) {
