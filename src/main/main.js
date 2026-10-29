@@ -6,6 +6,7 @@ const Store = require('./store');
 const Search = require('./search');
 const uninstall = require('./uninstall');
 const { preview } = require('./preview');
+const Taskbar = require('./taskbar');
 const { isWin, runDetached, spawnDetached, runInTerminal, powershell, psQuote } = require('./util');
 
 const isLinux = process.platform === 'linux';
@@ -102,10 +103,12 @@ const v8 = require('v8');
 v8.setFlagsFromString('--expose_gc');
 const runGc = require('vm').runInNewContext('gc');
 let trimTimer;
+let lastHideAt = 0;
 
 function hide() {
   if (win?.isVisible()) {
     win.hide();
+    lastHideAt = Date.now();
     win.webContents.send('hidden');
     clearTimeout(trimTimer);
     trimTimer = setTimeout(() => runGc?.(), 3000);
@@ -116,6 +119,15 @@ function toggle() {
   if (win.isVisible() && win.isFocused()) hide();
   else show();
 }
+
+// Görev çubuğundaki arama kutusuna tıklanınca: açıksa kapat, kapalıysa aç. Tıklama
+// launcher'ın odağını kaybettirip onu az önce gizlediyse tekrar açma.
+function togglePill() {
+  if (win.isVisible()) hide();
+  else if (Date.now() - lastHideAt > 300) show();
+}
+
+let taskbar;
 
 async function confirm(message, detail, okLabel = 'Evet') {
   modalOpen = true;
@@ -414,9 +426,16 @@ function setupIpc() {
     const item = search.get(id);
     return item ? doAction(item, actionId) : { keepOpen: true };
   });
-  ipcMain.handle('settings:get', () => ({ ...store.data, platform: process.platform, version: app.getVersion() }));
-  ipcMain.handle('settings:set', (_e, patch) => {
+  ipcMain.handle('settings:get', () => ({ ...store.data, platform: process.platform, version: app.getVersion(), taskbarError: taskbar?.lastError || null }));
+  ipcMain.handle('settings:set', async (_e, patch) => {
     const result = { ok: true };
+    if ('hideWindowsSearch' in patch) {
+      try {
+        await taskbar.setWindowsSearchHidden(patch.hideWindowsSearch);
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
     if ('hotkey' in patch && patch.hotkey !== store.get('hotkey')) {
       if (!registerHotkey(patch.hotkey)) {
         registerHotkey(store.get('hotkey'));
@@ -431,12 +450,14 @@ function setupIpc() {
         tray = null;
       }
     }
-    const allowed = ['hotkey', 'launchAtStartup', 'showTray', 'filePreview','hardwareAcceleration', 'theme','accent', 'selection', 'glass', 'density','maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
+    const allowed = ['taskbarSearch', 'taskbarSearchPos', 'hideWindowsSearch', 'searchRedirect', 'winKey', 'hotkey', 'launchAtStartup', 'showTray','filePreview','hardwareAcceleration', 'theme','accent', 'selection', 'glass', 'density','maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
     for (const k of Object.keys(patch)) if (allowed.includes(k)) store.data[k] = patch[k];
     store.save();
     if ('fileSearch' in patch || 'extraFileRoots' in patch) search.files.refresh();
+    if (['taskbarSearch', 'taskbarSearchPos', 'winKey', 'searchRedirect'].some((k) => k in patch)) await taskbar.apply();
     if ('theme' in patch) {
       win.webContents.send('theme', patch.theme);
+      taskbar.sendTheme(patch.theme);
       nativeTheme.themeSource = patch.theme; // cam malzemenin tonu da temaya uysun
     }
     return result;
@@ -459,6 +480,7 @@ function setupIpc() {
     }
   });
   ipcMain.on('hide', hide);
+  ipcMain.on('pill-open', togglePill);
   ipcMain.handle('relaunch', () => {
     store.flush();
     app.relaunch({ args: process.argv.slice(1).filter((a) => a !== '--hidden') });
@@ -511,6 +533,9 @@ app.whenReady().then(async () => {
   await search.init();
 
   registerStartupHotkey();
+  // Görev çubuğu arama kutusu ve Windows tuşu (seçenekler kapalıysa hiçbir şey çalışmaz)
+  taskbar = new Taskbar(store, { onWin: toggle, onPillClick: togglePill });
+  taskbar.apply();
 
   if (!process.argv.includes('--hidden')) {
     if (win.webContents.isLoading()) win.webContents.once('did-finish-load', () => show());
@@ -520,6 +545,7 @@ app.whenReady().then(async () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  taskbar?.dispose();
   store?.flush();
 });
 

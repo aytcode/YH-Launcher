@@ -64,7 +64,9 @@ Bağlantılar her zaman en son sürümü indirir. Tüm sürümler: [Releases](ht
 | **Hesap makinesi** | `12*(3+4)` yaz, Enter ile sonucu kopyala |
 | **Sistem komutları** | Kilitle, uyku, yeniden başlat, kapat, oturumu kapat, görev yöneticisi |
 | **Akıllı sıralama** | Sık ve yakın zamanda kullandıkların otomatik olarak öne çıkar |
+| **Görev çubuğu (Windows)** | İsteğe bağlı: Windows arama kutusu / Win+S YH Launcher'ı açar, Windows tuşu YH Launcher'ı açar, Windows arama kutusunu gizle, görev çubuğunda ayrı YH arama kutusu (tam ekranda gizlenir) |
 | **Eklenti sistemi** | Topluluğun yazdığı eklentilerle genişler (bkz. [PLUGINS.md](PLUGINS.md)) |
+| **Hazır eklentiler** | `kur 100 dolar` döviz çevirici, `zaman 5dk çay` zamanlayıcı, `dev uuid` geliştirici araçları, `yh not …` hızlı notlar |
 | **Gizleme** | İstemediğin sonuçları `Ctrl+H` ile gizle |
 | **Görünüm** | Koyu / açık / otomatik tema, 9 vurgu rengi, cam yoğunluğu, satır yoğunluğu |
 | **Hafif** | Boştayken %0 CPU, sağ altta simge yok (isteğe bağlı), donanım hızlandırma varsayılan kapalı |

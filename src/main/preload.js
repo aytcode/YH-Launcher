@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('yh', {
   openUrl: (url) => ipcRenderer.invoke('open-url', url),
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   hide: () => ipcRenderer.send('hide'),
+  openFromPill: () => ipcRenderer.send('pill-open'),
   relaunch: () => ipcRenderer.invoke('relaunch'),
   // Gizliyken görsel/kaynak önbelleğini bırak
   trimMemory: () => webFrame.clearCache(),

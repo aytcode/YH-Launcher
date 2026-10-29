@@ -29,6 +29,7 @@ const Settings = (() => {
   const TABS = [
     ['general', 'Genel', 'gear'],
     ['appearance', 'Görünüm', 'palette'],
+    ['taskbar', 'Görev çubuğu', 'taskbar'],
     ['sites', 'Siteler', 'globe'],
     ['engines', 'Arama kısayolları', 'search'],
     ['commands', 'Özel komutlar', 'terminal'],
@@ -164,6 +165,30 @@ const Settings = (() => {
           <div class="lp-row sel">${symTile('globe', 28)}<div><b>YazılımHub Discord</b><small>discord.gg/yazilimhub</small></div></div>
           <div class="lp-row">${symTile('terminal', 28)}<div><b>Terminal komutu</b><small>&gt; npm run dev</small></div></div>
         </div>`;
+    },
+
+    taskbar() {
+      if (cfg.platform !== 'win32') {
+        return `
+          <h2>Görev çubuğu</h2>
+          <p class="hint">Bu seçenekler Windows'a özel. Linux'ta masaüstünün klavye ayarlarından <code>yh-launcher --toggle</code> komutuna istediğin tuşu (ör. Super) atayabilirsin.</p>`;
+      }
+      return `
+        <h2>Görev çubuğu</h2>
+        <p class="hint">Hepsi isteğe bağlı. İstediğin zaman kapatabilirsin; kapatınca Windows eski hâline döner.</p>
+        ${cfg.taskbarError ? `<div class="group"><div class="error-text" style="padding:12px 14px">${esc(cfg.taskbarError)}</div></div>` : ''}
+        ${group(
+          row('Windows araması YH Launcher\'ı açsın', 'Görev çubuğundaki Windows arama kutusuna/düğmesine tıklayınca ya da Win+S\'ye basınca Windows araması yerine YH Launcher açılır.', sw('searchRedirect', cfg.searchRedirect)) +
+            row('Windows tuşu YH Launcher\'ı açsın', 'Win tuşuna tek başına basınca Başlat yerine YH Launcher açılır. Win+E, Win+D gibi kısayollar çalışmaya devam eder.', sw('winKey', cfg.winKey)),
+          'Windows araması'
+        )}
+        ${group(
+          row('Windows arama kutusunu gizle', 'Görev çubuğundaki Windows aramasını tamamen kaldırır. Kapatınca önceki hâline döner.', sw('hideWindowsSearch', cfg.hideWindowsSearch)) +
+            row('YH arama kutusu', 'Görev çubuğunun üstünde ayrı bir arama kutusu. Tam ekran oyun ve videolarda gizlenir.', sw('taskbarSearch', cfg.taskbarSearch)) +
+            row('Kutunun konumu', 'Simgelerin üstüne binmeyecek bir yere kaydır', `<input type="range" class="range" min="0" max="100" step="1" data-key="taskbarSearchPos" data-number value="${Number(cfg.taskbarSearchPos) || 0}" ${cfg.taskbarSearch ? '' : 'disabled'}>`),
+          'Görev çubuğu'
+        )}
+        <p class="hint">Windows tuşu, Windows araması ve tam ekran algılama için küçük bir yardımcı (8 KB) ilk açtığında Windows'un kendi .NET derleyicisiyle hazırlanır; sadece bu seçenekler açıkken çalışır, boştayken iş yapmaz.</p>`;
     },
 
     sites() {
@@ -379,8 +404,22 @@ const Settings = (() => {
     const key = t.dataset.key;
     if (!key) return;
     const value = t.type === 'checkbox' ? t.checked : 'number' in t.dataset ? Number(t.value) : t.value;
-    await save({ [key]: value });
+    const ok = await save({ [key]: value });
     if (key === 'theme') applyTheme(value);
+    // Görev çubuğu seçenekleri: yardımcı derlenemezse hata mesajı ve bağımlı kontroller güncellensin
+    if (ok && ['taskbarSearch', 'hideWindowsSearch', 'winKey', 'searchRedirect'].includes(key)) {
+      cfg = await yh.getSettings();
+      render();
+    }
+  });
+
+  // Kaydırıcı sürüklenirken arama kutusu canlı kaysın
+  let rangeTimer;
+  el.addEventListener('input', (e) => {
+    const t = e.target;
+    if (t.type !== 'range' || !t.dataset.key) return;
+    clearTimeout(rangeTimer);
+    rangeTimer = setTimeout(() => yh.setSettings({ [t.dataset.key]: Number(t.value) }), 40);
   });
 
   // Kısayol yakalama

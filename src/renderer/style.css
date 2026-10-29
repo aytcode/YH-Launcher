@@ -1580,3 +1580,13 @@ html[data-selection='accent'] .live-preview .lp-row.sel small {
   color: var(--text-3);
   font-size: 12px;
 }
+
+/* Ayarlar: kaydırıcı */
+.range {
+  width: 170px;
+  accent-color: var(--accent);
+}
+
+.range:disabled {
+  opacity: 0.4;
+}

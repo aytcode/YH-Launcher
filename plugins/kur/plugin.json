@@ -1,0 +1,9 @@
+{
+  "id": "kur",
+  "name": "Döviz Kuru",
+  "description": "Döviz çevirici: kur 100 dolar, kur 50 euro tl, kur sterlin",
+  "version": "1.0.0",
+  "author": "YazılımHub",
+  "keyword": "kur",
+  "main": "index.js"
+}

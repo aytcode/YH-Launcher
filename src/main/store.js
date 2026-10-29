@@ -6,6 +6,12 @@ const DEFAULTS = {
   hotkey: 'Alt+Space',
   launchAtStartup: false,
   showTray: false, // sağ alttaki tepsi simgesi
+  // Görev çubuğu (Windows) — hepsi isteğe bağlı, varsayılan kapalı
+  taskbarSearch: false, // görev çubuğunda arama kutusu
+  taskbarSearchPos: null, // soldan yüzde; null: görev çubuğu hizasına göre otomatik
+  hideWindowsSearch: false, // Windows'un kendi arama kutusunu gizle
+  searchRedirect: false, // Windows arama kutusu / Win+S YH Launcher'ı açar
+  winKey: false, // Windows tuşu tek başına launcher'ı açar
   hardwareAcceleration: false, // kapalıyken daha az RAM (GPU süreci küçülür)
   theme: 'dark', // dark | light | system
   accent: 'blue', // blue | purple | pink | red | orange | yellow | green | indigo | graphite

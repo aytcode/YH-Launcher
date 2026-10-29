@@ -1,0 +1,9 @@
+{
+  "id": "zaman",
+  "name": "Zamanlayıcı",
+  "description": "Hatırlatıcı: zaman 5dk çay, zaman 30sn, zaman 14:30 toplantı",
+  "version": "1.0.0",
+  "author": "YazılımHub",
+  "keyword": "zaman",
+  "main": "index.js"
+}

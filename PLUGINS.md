@@ -116,5 +116,7 @@ module.exports = {
 
 - [`plugins/dev-tools`](plugins/dev-tools) — `dev uuid`, `dev b64 …`, `dev sha256 …`, `dev json …`, `dev ts`, `dev renk #4f8cff`, `dev sifre 24`
 - [`plugins/yazilimhub`](plugins/yazilimhub) — topluluk bağlantıları ve `yh not …` ile kalıcı hızlı notlar (storage örneği)
+- [`plugins/kur`](plugins/kur) — `kur 100 dolar`, `kur 50 euro tl`: internetten veri çeken (fetch + önbellek) eklenti örneği
+- [`plugins/zaman`](plugins/zaman) — `zaman 5dk çay`, `zaman 14:30 toplantı`: `run` ve `ctx.notify` ile arka planda çalışan eklenti örneği
 
 Eklentini **[discord.gg/yazilimhub](https://discord.gg/yazilimhub)**'da paylaş!
