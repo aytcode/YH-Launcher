@@ -426,18 +426,28 @@ function setupIpc() {
     const item = search.get(id);
     return item ? doAction(item, actionId) : { keepOpen: true };
   });
-  ipcMain.handle('settings:get', () => ({ ...store.data, platform: process.platform, version: app.getVersion(), taskbarError: taskbar?.lastError || null }));
+  ipcMain.handle('settings:get', async () => ({
+    ...store.data,
+    platform: process.platform,
+    version: app.getVersion(),
+    taskbarError: taskbar?.lastError || null,
+    // Windows'un kendi ayarı: kayıt defterinden okunur (Windows Ayarlar'dan da değiştirilebilir)
+    // (açılışta görev çubuğu modülü hazır olmadan da sorulabilir)
+    windowsSearchMode: isWin && taskbar ? String(await taskbar.getWindowsSearchMode()) : null,
+  }));
   ipcMain.handle('settings:set', async (_e, patch) => {
     const result = { ok: true };
-    if ('hideWindowsSearch' in patch) {
+    if ('windowsSearchMode' in patch) {
+      const MODE_NAMES = { 0: 'gizlensin', 1: 'sadece simge olsun', 2: 'arama kutusu olsun', 3: 'düğme olsun' };
+      const mode = Number(patch.windowsSearchMode);
       try {
-        await taskbar.setWindowsSearchHidden(patch.hideWindowsSearch);
+        await taskbar.setWindowsSearchMode(mode);
       } catch (e) {
         return { ok: false, error: e.message };
       }
       // Görev çubuğu ayarı çoğu sürümde ancak Gezgin yeniden başlayınca uygulanır
       const restart = await confirm(
-        patch.hideWindowsSearch ? 'Windows arama kutusu gizlensin mi?' : 'Windows arama kutusu geri getirilsin mi?',
+        `Windows araması ${MODE_NAMES[mode]} mı?`,
         'Değişikliğin görünmesi için görev çubuğu (Windows Gezgini) birkaç saniyeliğine yeniden başlatılacak. Açık klasör pencereleri kapanır. "Sonra" dersen bir sonraki oturum açışında uygulanır.',
         'Şimdi uygula',
         'Sonra'
@@ -458,7 +468,7 @@ function setupIpc() {
         tray = null;
       }
     }
-    const allowed = ['taskbarSearch', 'taskbarSearchPos', 'hideWindowsSearch', 'searchRedirect', 'winKey', 'hotkey', 'launchAtStartup', 'showTray','filePreview','hardwareAcceleration', 'theme','accent', 'selection', 'glass', 'density','maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
+    const allowed = ['taskbarSearch', 'taskbarSearchPos', 'searchRedirect', 'winKey', 'hotkey', 'launchAtStartup', 'showTray','filePreview','hardwareAcceleration', 'theme','accent', 'selection', 'glass', 'density','maxResults', 'fileSearch', 'extraFileRoots', 'defaultEngine', 'autoLearnSites', 'hidden', 'sites', 'engines', 'commands', 'disabledPlugins', 'usage'];
     for (const k of Object.keys(patch)) if (allowed.includes(k)) store.data[k] = patch[k];
     store.save();
     if ('fileSearch' in patch || 'extraFileRoots' in patch) search.files.refresh();

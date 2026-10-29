@@ -183,7 +183,13 @@ const Settings = (() => {
           'Windows araması'
         )}
         ${group(
-          row('Windows arama kutusunu gizle', 'Görev çubuğundaki Windows aramasını kaldırır; uygulamak için görev çubuğu birkaç saniye yeniden başlar. Kapatınca önceki hâline döner.', sw('hideWindowsSearch', cfg.hideWindowsSearch)) +
+          row(
+            'Windows araması görünümü',
+            'Görev çubuğundaki Windows araması. Uygulamak için görev çubuğu birkaç saniye yeniden başlar.',
+            `<div class="segmented">${[['2', 'Kutu'], ['3', 'Düğme'], ['1', 'Simge'], ['0', 'Gizli']]
+              .map(([v, l]) => `<button data-set="windowsSearchMode" data-val="${v}" class="${cfg.windowsSearchMode === v ? 'active' : ''}">${l}</button>`)
+              .join('')}</div>`
+          ) +
             row('YH arama kutusu', 'Görev çubuğunun üstünde ayrı bir arama kutusu. Tam ekran oyun ve videolarda gizlenir.', sw('taskbarSearch', cfg.taskbarSearch)) +
             row('Kutunun konumu', 'Simgelerin üstüne binmeyecek bir yere kaydır', `<input type="range" class="range" min="0" max="100" step="1" data-key="taskbarSearchPos" data-number value="${Number(cfg.taskbarSearchPos) || 0}" ${cfg.taskbarSearch ? '' : 'disabled'}>`),
           'Görev çubuğu'
@@ -407,7 +413,7 @@ const Settings = (() => {
     const ok = await save({ [key]: value });
     if (key === 'theme') applyTheme(value);
     // Görev çubuğu seçenekleri: yardımcı derlenemezse hata mesajı ve bağımlı kontroller güncellensin
-    if (ok && ['taskbarSearch', 'hideWindowsSearch', 'winKey', 'searchRedirect'].includes(key)) {
+    if (ok && ['taskbarSearch', 'winKey', 'searchRedirect'].includes(key)) {
       cfg = await yh.getSettings();
       render();
     }

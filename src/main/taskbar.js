@@ -277,19 +277,18 @@ class Taskbar {
 
   // ---------------------------------------------------------------- Windows arama kutusu
 
-  async setWindowsSearchHidden(hide) {
-    if (!isWin) return;
+  // Windows'un görev çubuğu arama görünümü: 0 gizli, 1 sadece simge, 2 arama kutusu,
+  // 3 simge + "Ara" etiketi (düğme). Değer yoksa Windows varsayılanı kutudur.
+  async getWindowsSearchMode() {
+    if (!isWin) return null;
     const q = await run('reg', ['query', SEARCH_KEY, '/v', 'SearchboxTaskbarMode']);
     const m = q.ok && q.stdout.match(/0x([0-9a-f]+)/i);
-    const current = m ? parseInt(m[1], 16) : null;
-    let value;
-    if (hide) {
-      // Kapatınca geri getirebilmek için kullanıcının önceki seçimini sakla
-      if (current != null && current !== 0) this.store.set('prevSearchboxMode', current);
-      value = 0;
-    } else {
-      value = this.store.get('prevSearchboxMode') ?? 2;
-    }
+    return m ? parseInt(m[1], 16) : 2;
+  }
+
+  async setWindowsSearchMode(value) {
+    if (!isWin) return;
+    if (![0, 1, 2, 3].includes(value)) throw new Error('Geçersiz arama görünümü');
     // Yeni Windows 11 sürümleri ...ModeCache değerini de okur; ikisi aynı olmalı
     for (const name of ['SearchboxTaskbarMode', 'SearchboxTaskbarModeCache']) {
       const r = await run('reg', ['add', SEARCH_KEY, '/v', name, '/t', 'REG_DWORD', '/d', String(value), '/f']);

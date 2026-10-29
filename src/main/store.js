@@ -9,7 +9,6 @@ const DEFAULTS = {
   // Görev çubuğu (Windows) — hepsi isteğe bağlı, varsayılan kapalı
   taskbarSearch: false, // görev çubuğunda arama kutusu
   taskbarSearchPos: null, // soldan yüzde; null: görev çubuğu hizasına göre otomatik
-  hideWindowsSearch: false, // Windows'un kendi arama kutusunu gizle
   searchRedirect: false, // Windows arama kutusu / Win+S YH Launcher'ı açar
   winKey: false, // Windows tuşu tek başına launcher'ı açar
   hardwareAcceleration: false, // kapalıyken daha az RAM (GPU süreci küçülür)
